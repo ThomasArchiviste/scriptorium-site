@@ -1,10 +1,3 @@
-// Fonction serverless Vercel — relaie les requêtes de l'assistant vers l'API
-// Anthropic en gardant la clé secrète côté serveur. Le navigateur ne voit jamais la clé.
-//
-// Variables d'environnement à définir dans Vercel (Settings → Environment Variables) :
-//   ANTHROPIC_API_KEY   (obligatoire)  ta clé API Anthropic
-//   ANTHROPIC_MODEL     (facultatif)   ex. claude-sonnet-4-6 (valeur par défaut)
-
 function readBody(req) {
   return new Promise((resolve) => {
     let data = "";
@@ -20,9 +13,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    res.status(500).json({ error: "Clé API absente. Ajoute ANTHROPIC_API_KEY dans les variables d'environnement Vercel." });
+    res.status(500).json({ error: "Clé absente. Ajoute GEMINI_API_KEY dans les variables d'environnement Vercel (clé gratuite : aistudio.google.com)." });
     return;
   }
 
@@ -41,19 +34,19 @@ export default async function handler(req, res) {
       return;
     }
 
-    const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/"
+      + encodeURIComponent(model) + ":generateContent";
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model,
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 1000, temperature: 0.4 },
       }),
     });
 
@@ -64,11 +57,10 @@ export default async function handler(req, res) {
       return;
     }
 
-    const text = (data.content || [])
-      .map((c) => c.text || "")
-      .filter(Boolean)
-      .join("\n")
-      .trim();
+    const cand = data.candidates && data.candidates[0];
+    const text = cand && cand.content && cand.content.parts
+      ? cand.content.parts.map((p) => p.text || "").filter(Boolean).join("\n").trim()
+      : "";
 
     res.status(200).json({ text });
   } catch (e) {
