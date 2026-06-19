@@ -3,7 +3,8 @@ import {
   Search, Calendar, BookOpen, Network, Clock, Image as ImageIcon, FileText,
   Quote, Settings, Plus, Trash2, X, ExternalLink, Send, Sparkles, Pencil,
   ChevronRight, Upload, Layers, PenTool, Home, FolderOpen, User, Map as MapIcon,
-  Library, Save, Info, Link2, ArrowRight, BookMarked, ChevronDown, Filter
+  Library, Save, Info, Link2, ArrowRight, BookMarked, ChevronDown, Filter,
+  Moon, Sun, BookText, CornerDownRight, Workflow
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -221,6 +222,66 @@ textarea.inp{resize:vertical; min-height:72px; line-height:1.5}
 .foot .mark{font-family:var(--serif); color:var(--vellum-dim); font-size:15px}
 
 @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important}}
+
+/* Galerie Google Drive (aperçus) */
+.dgal{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px}
+.dgal-card{display:flex; flex-direction:column; text-decoration:none; background:var(--ink2); border:1px solid var(--line-soft); border-radius:3px; overflow:hidden; transition:all .16s}
+.dgal-card:hover{border-color:var(--brass); transform:translateY(-2px)}
+.dgal-thumb{position:relative; width:100%; aspect-ratio:4/3; background:#0f0c09; display:grid; place-items:center; overflow:hidden}
+.dgal-thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.dgal-thumb .ph{color:var(--brass); opacity:.55}
+.dgal-meta{padding:9px 10px}
+.dgal-name{font-size:12.5px; color:var(--vellum); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.dgal-type{font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin-top:4px}
+.dgal-badge{position:absolute; top:6px; left:6px; background:rgba(15,12,9,.78); border:1px solid var(--line); color:var(--brass); border-radius:2px; padding:2px 6px; font-size:9.5px; letter-spacing:1px; text-transform:uppercase}
+
+/* Agenda — filtre thème sombre */
+.agenda-wrap{border:1px solid var(--line); border-radius:2px; overflow:hidden; background:var(--ink2)}
+.agenda-wrap.dark iframe{filter:invert(0.9) hue-rotate(180deg) saturate(0.85) contrast(0.95)}
+.agenda-wrap iframe{display:block}
+
+/* Wiki façon Notion */
+.wiki{display:grid; grid-template-columns:260px 1fr; gap:0; border:1px solid var(--line); border-radius:3px; overflow:hidden; min-height:520px}
+@media(max-width:760px){.wiki{grid-template-columns:1fr}}
+.wiki-side{background:var(--ink2); border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0}
+@media(max-width:760px){.wiki-side{border-right:0; border-bottom:1px solid var(--line); max-height:240px}}
+.wiki-side-h{padding:12px; border-bottom:1px solid var(--line-soft)}
+.wiki-search{display:flex; align-items:center; gap:8px; background:var(--ink); border:1px solid var(--line); border-radius:2px; padding:7px 10px; color:var(--vellum-dim); margin-bottom:9px}
+.wiki-search input{background:none; border:none; outline:none; color:var(--vellum); font-family:var(--sans); font-size:12.5px; width:100%}
+.wiki-tree{flex:1; overflow-y:auto; padding:7px}
+.wiki-row{display:flex; align-items:center; gap:5px; border-radius:2px; cursor:pointer; color:var(--vellum-dim); font-size:13px; padding:6px 7px; transition:background .12s; user-select:none}
+.wiki-row:hover{background:rgba(196,164,82,.07); color:var(--vellum)}
+.wiki-row.on{background:rgba(196,164,82,.14); color:var(--brass-hi)}
+.wiki-row .twirl{width:15px; flex:none; display:grid; place-items:center; color:var(--muted)}
+.wiki-row .emoji{flex:none; width:18px; text-align:center}
+.wiki-row .label{flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wiki-row .addk{opacity:0; flex:none; color:var(--muted); border:none; background:none; cursor:pointer; padding:0 3px}
+.wiki-row:hover .addk{opacity:1}
+.wiki-row .addk:hover{color:var(--brass)}
+.wiki-main{display:flex; flex-direction:column; min-width:0; background:linear-gradient(180deg,var(--leather),var(--leather2))}
+.wiki-bar{display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--line-soft)}
+.wiki-bar .crumb{flex:1; font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.wiki-body{flex:1; overflow-y:auto; padding:20px 24px}
+.wiki-emoji-in{width:46px; font-size:30px; background:none; border:none; outline:none; text-align:center; cursor:pointer}
+.wiki-title-in{width:100%; background:none; border:none; outline:none; color:var(--vellum); font-family:var(--serif); font-size:32px; font-weight:600; line-height:1.1}
+.wiki-title-in::placeholder{color:var(--muted)}
+.wiki-tagrow{display:flex; align-items:center; gap:8px; margin:10px 0 4px}
+.wiki-tagrow input{flex:1; background:var(--ink2); border:1px solid var(--line-soft); color:var(--vellum-dim); border-radius:2px; padding:6px 9px; font-size:12px; outline:none; font-family:var(--sans)}
+.wiki-edit{width:100%; min-height:300px; background:var(--ink2); border:1px solid var(--line-soft); border-radius:2px; color:var(--vellum); font-family:var(--sans); font-size:14px; line-height:1.7; padding:14px; outline:none; resize:vertical}
+.wiki-edit:focus{border-color:var(--brass)}
+.wiki-hint{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.5}
+.wiki-render{font-size:14.5px; line-height:1.75; color:var(--vellum)}
+.wiki-render h1{font-family:var(--serif); font-size:25px; font-weight:600; margin:18px 0 8px}
+.wiki-render h2{font-family:var(--serif); font-size:21px; font-weight:600; margin:16px 0 7px}
+.wiki-render h3{font-size:16px; font-weight:600; color:var(--vellum-dim); margin:14px 0 6px; letter-spacing:.3px}
+.wiki-render p{margin:0 0 11px}
+.wiki-render ul{margin:0 0 11px; padding-left:20px}
+.wiki-render li{margin:3px 0}
+.wiki-render strong{color:#fff; font-weight:600}
+.wlink{color:var(--brass-hi); border-bottom:1px solid var(--line); cursor:pointer; text-decoration:none}
+.wlink:hover{border-color:var(--brass)}
+.wlink.missing{color:var(--sanguine); border-bottom-style:dotted}
+
 @media(max-width:760px){
   .topsearch{display:none} .nav{margin-left:0} .topbar-in{gap:10px; flex-wrap:wrap; height:auto; padding:12px 0}
   .view-title{font-size:30px}
@@ -385,17 +446,25 @@ Réponds en français, de façon concise et précise. Quand des éléments de l'
 /* ------------------------------------------------------------------ */
 
 function Agenda({ cfg, openSettings }) {
+  const [dark, setDark] = usePersistent("scr.agendaDark", true);
   const src = useMemo(() => {
     const v = (cfg.calendar || "").trim();
     if (!v) return "";
     if (v.startsWith("http")) return v;
-    return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(v)}&ctz=Europe/Paris&mode=AGENDA&bgcolor=%23262019`;
+    return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(v)}&ctz=Europe/Paris&mode=AGENDA&bgcolor=%23FFFFFF`;
   }, [cfg.calendar]);
   return (
     <Panel icon={Calendar} title="Agenda" kicker="Google Agenda" cote="ACC·AG"
-      right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
+      right={<span style={{ display: "flex", gap: 6 }}>
+        <button className="mini" title={dark ? "Affichage clair" : "Affichage sombre"} onClick={() => setDark((d) => !d)}>
+          {dark ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+        <button className="mini" onClick={openSettings}><Settings size={15} /></button>
+      </span>}>
       {src ? (
-        <iframe title="agenda" className="frame" src={src} style={{ height: 360 }} />
+        <div className={"agenda-wrap" + (dark ? " dark" : "")}>
+          <iframe title="agenda" src={src} style={{ width: "100%", height: 360, border: 0 }} />
+        </div>
       ) : (
         <div>
           <Empty icon={Calendar} title="Agenda non relié"
@@ -415,24 +484,15 @@ function Agenda({ cfg, openSettings }) {
 
 function DriveDocs({ cfg, openSettings }) {
   const id = (cfg.docFolder || "").trim();
-  const src = id ? `https://drive.google.com/embeddedfolderview?id=${id}#list` : "";
   return (
     <Panel icon={FileText} title="Documents" kicker="Fichiers Word · Google Drive" cote="ACC·DOC"
       right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
-      {src ? (
-        <>
-          <iframe title="documents" className="frame" src={src} style={{ height: 320 }} />
-          <div className="notice" style={{ marginTop: 12 }}>
-            <Info size={17} className="ico" />
-            <div>Clique un fichier pour l'ouvrir et l'éditer dans Google, connecté à ton compte. <b>L'édition directement dans cette fenêtre</b> sera activée au déploiement, via la connexion Google (Picker + Docs API).</div>
-          </div>
-        </>
-      ) : (
-        <div>
-          <Empty icon={FileText} title="Aucun dossier relié"
-            text="Navigue dans tes fichiers Word depuis un dossier Drive et ouvre-les pour les éditer." />
-          <Notice><b>Sans authentification :</b> partage un dossier Drive « toute personne disposant du lien », copie l'identifiant après <i>/folders/</i> dans l'URL, et colle-le dans les réglages.</Notice>
-          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Relier mes documents</button>
+      <DriveBody cfg={cfg} folderId={id} mode="list" openSettings={openSettings} badge="Word"
+        emptyText="Navigue dans tes fichiers Word depuis un dossier Drive et ouvre-les pour les éditer." />
+      {id && (
+        <div className="notice" style={{ marginTop: 12 }}>
+          <Info size={17} className="ico" />
+          <div>Clique un document pour l'ouvrir et l'éditer dans Google, connecté à ton compte. <b>L'édition directement dans cette fenêtre</b> demanderait la connexion Google (Picker + Docs API).</div>
         </div>
       )}
     </Panel>
@@ -596,87 +656,6 @@ function GestionBlock() {
 const COLS = [{ k: "afaire", l: "À faire" }, { k: "encours", l: "En cours" }, { k: "termine", l: "Terminé" }];
 
 /* ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ */
-/*  BIBLIOTHÈQUE — Zotero (API réelle, lecture)                       */
-/* ------------------------------------------------------------------ */
-
-function Zotero({ cfg, openSettings, onItems }) {
-  const [items, setItems] = useState([]);
-  const [status, setStatus] = useState("idle"); // idle | loading | ok | error
-  const [err, setErr] = useState("");
-  const [query, setQuery] = useState("");
-
-  const fetchItems = useCallback(async () => {
-    if (!cfg.zoteroId) return;
-    setStatus("loading"); setErr("");
-    try {
-      const type = cfg.zoteroType === "group" ? "groups" : "users";
-      const url = `https://api.zotero.org/${type}/${cfg.zoteroId}/items/top?limit=60&sort=date&format=json`;
-      const headers = {};
-      if (cfg.zoteroKey) headers["Zotero-API-Key"] = cfg.zoteroKey;
-      const res = await fetch(url, { headers });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      const mapped = data.map((d) => ({
-        id: d.key,
-        title: d.data.title || d.data.bookTitle || "(sans titre)",
-        creators: (d.data.creators || []).map((c) => c.lastName || c.name).filter(Boolean).join(", "),
-        date: d.data.date || "",
-        type: d.data.itemType,
-        url: d.links && d.links.alternate ? d.links.alternate.href : "",
-      }));
-      setItems(mapped); setStatus("ok");
-      if (onItems) onItems(mapped);
-    } catch (e) {
-      setStatus("error");
-      setErr("Connexion impossible. Vérifie l'identifiant de bibliothèque (et la clé pour une bibliothèque privée).");
-    }
-  }, [cfg, onItems]);
-
-  useEffect(() => { if (cfg.zoteroId) fetchItems(); /* eslint-disable-next-line */ }, [cfg.zoteroId, cfg.zoteroType]);
-
-  const filtered = items.filter((i) =>
-    !query || (i.title + i.creators).toLowerCase().includes(query.toLowerCase()));
-
-  return (
-    <Panel icon={BookMarked} title="Zotero" kicker="Références bibliographiques" cote="BIB·ZOT"
-      right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
-      {!cfg.zoteroId ? (
-        <div>
-          <Empty icon={BookMarked} title="Zotero non relié"
-            text="Branche ta bibliothèque Zotero en lecture pour parcourir et chercher tes références sans quitter le tableau de bord." />
-          <Notice><b>Ce qu'il te faut :</b> ton identifiant d'utilisateur Zotero (Paramètres → Sécurité → Applications, « Your userID »), et une clé API privée si ta bibliothèque n'est pas publique. Renseigne-les dans les réglages.</Notice>
-          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Relier Zotero</button>
-        </div>
-      ) : (
-        <div>
-          <div style={{ display: "flex", gap: 9, marginBottom: 12 }}>
-            <div className="topsearch" style={{ flex: 1, display: "flex" }}>
-              <Search size={15} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filtrer les références…" />
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={fetchItems}>Actualiser</button>
-          </div>
-          {status === "loading" && <div className="empty"><div className="dots"><span /><span /><span /></div></div>}
-          {status === "error" && <Notice>{err}</Notice>}
-          {status === "ok" && filtered.length === 0 && <div className="empty"><p>Aucune référence ne correspond.</p></div>}
-          <div className="scroll zgrid" style={{ maxHeight: 540 }}>
-            {filtered.map((i) => (
-              <div className="item" key={i.id}>
-                <div className="item-t">{i.title}</div>
-                <div className="item-m">{[i.creators, i.date, i.type].filter(Boolean).join(" · ")}</div>
-                {i.url && <div className="item-actions"><a className="btn btn-ghost btn-sm" href={i.url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Ouvrir</a></div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  BIBLIOTHÈQUE — Tropy (import JSON-LD, lecture)                     */
 /* ------------------------------------------------------------------ */
 
@@ -805,43 +784,289 @@ function Citations({ register }) {
 /*  Embed Google Drive (banque d'image, livres PDF)                   */
 /* ------------------------------------------------------------------ */
 
-function DriveEmbed({ icon, title, kicker, cote, folderId, mode, openSettings, emptyText }) {
-  const src = folderId ? `https://drive.google.com/embeddedfolderview?id=${folderId}#${mode || "grid"}` : "";
+function DriveThumb({ id, mimeType, badge }) {
+  const [err, setErr] = useState(false);
+  const isImg = (mimeType || "").startsWith("image/");
+  const Ico = isImg ? ImageIcon : FileText;
+  const thumb = `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+  return (
+    <div className="dgal-thumb">
+      {badge && <span className="dgal-badge">{badge}</span>}
+      {!err
+        ? <img src={thumb} alt="" loading="lazy" onError={() => setErr(true)} />
+        : <Ico size={34} className="ph" />}
+    </div>
+  );
+}
+
+function typeLabel(mimeType) {
+  const m = mimeType || "";
+  if (m.includes("pdf")) return "PDF";
+  if (m.includes("word") || m.includes("officedocument.wordprocessing") || m.endsWith("document")) return "Document";
+  if (m.startsWith("image/")) return "Image";
+  if (m.includes("folder")) return "Dossier";
+  if (m.includes("spreadsheet") || m.includes("excel")) return "Tableur";
+  if (m.includes("presentation")) return "Présentation";
+  return "Fichier";
+}
+
+function useDriveFiles(apiKey, folderId) {
+  const [state, setState] = useState({ status: "idle", files: [], error: "" });
+  useEffect(() => {
+    if (!apiKey || !folderId) { setState({ status: "idle", files: [], error: "" }); return; }
+    let active = true;
+    setState({ status: "loading", files: [], error: "" });
+    const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const fields = encodeURIComponent("files(id,name,mimeType,modifiedTime)");
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&key=${apiKey}&fields=${fields}&orderBy=folder,name&pageSize=200`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!active) return;
+        if (d.error) { setState({ status: "error", files: [], error: d.error.message || "Erreur Drive" }); return; }
+        setState({ status: "ok", files: d.files || [], error: "" });
+      })
+      .catch((e) => { if (active) setState({ status: "error", files: [], error: (e && e.message) || "Erreur réseau" }); });
+    return () => { active = false; };
+  }, [apiKey, folderId]);
+  return state;
+}
+
+function DriveBody({ cfg, folderId, mode, emptyText, openSettings, badge }) {
+  const apiKey = ((cfg && cfg.driveKey) || "").trim();
+  const { status, files, error } = useDriveFiles(apiKey, folderId);
+  const [query, setQuery] = useState("");
+
+  if (!folderId) {
+    return (
+      <div>
+        <Empty icon={FolderOpen} title="Dossier non relié" text={emptyText} />
+        <Notice><b>Pour des aperçus visuels :</b> renseigne une <b>clé API Google Drive</b> (gratuite) et l'identifiant d'un dossier partagé « avec le lien », dans les réglages. Sans clé, le dossier s'affiche via l'aperçu standard de Drive.</Notice>
+        <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Relier un dossier Drive</button>
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    const src = `https://drive.google.com/embeddedfolderview?id=${folderId}#${mode || "grid"}`;
+    return (
+      <div>
+        <iframe title="drive" className="frame" src={src} style={{ height: 380 }} />
+        <Notice>Pour des vignettes intégrées au thème et des noms lisibles, ajoute une <b>clé API Google Drive</b> dans les réglages.</Notice>
+      </div>
+    );
+  }
+
+  const filtered = files.filter((f) => !query || f.name.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <div>
+      <div className="topsearch" style={{ display: "flex", marginBottom: 13 }}>
+        <Search size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filtrer les fichiers…" />
+      </div>
+      {status === "loading" && <div className="empty"><div className="dots"><span /><span /><span /></div></div>}
+      {status === "error" && <Notice>Connexion Drive impossible : {error}. Vérifie la clé API et le partage du dossier.</Notice>}
+      {status === "ok" && filtered.length === 0 && <div className="empty"><p>Aucun fichier{query ? " ne correspond" : " dans ce dossier"}.</p></div>}
+      {status === "ok" && filtered.length > 0 && (
+        <div className="dgal scroll" style={{ maxHeight: 470 }}>
+          {filtered.map((f) => (
+            <a className="dgal-card" key={f.id}
+              href={(f.mimeType || "").includes("folder") ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`}
+              target="_blank" rel="noreferrer">
+              <DriveThumb id={f.id} mimeType={f.mimeType} badge={badge} />
+              <div className="dgal-meta">
+                <div className="dgal-name">{f.name}</div>
+                <div className="dgal-type">{typeLabel(f.mimeType)}</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DriveEmbed({ icon, title, kicker, cote, folderId, mode, openSettings, emptyText, cfg, badge }) {
   return (
     <Panel icon={icon} title={title} kicker={kicker} cote={cote}
       right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
-      {src ? (
-        <iframe title={title} className="frame" src={src} style={{ height: 380 }} />
-      ) : (
-        <div>
-          <Empty icon={icon} title="Dossier non relié" text={emptyText} />
-          <Notice><b>Sans authentification :</b> partage un dossier Drive « Tous les utilisateurs disposant du lien », copie son identifiant (la partie après <i>/folders/</i> dans l'URL) et colle-le dans les réglages. Le contenu s'affiche ici.</Notice>
-          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Relier un dossier Drive</button>
-        </div>
-      )}
+      <DriveBody cfg={cfg} folderId={folderId} mode={mode} emptyText={emptyText} openSettings={openSettings} badge={badge} />
     </Panel>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  WIKI — Obsidian                                                   */
+/*  WIKI — Base de connaissances façon Notion (pages liées)           */
 /* ------------------------------------------------------------------ */
 
-function Obsidian({ cfg, openSettings }) {
-  const url = (cfg.obsidian || "").trim();
-  return (
-    <Panel icon={Network} title="Obsidian" kicker="Notes liées · base de connaissances" cote="WIK·OBS"
-      right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
-      {url ? (
-        <iframe title="obsidian" className="frame" src={url} style={{ height: 420 }} />
-      ) : (
-        <div>
-          <Empty icon={Network} title="Coffre non publié"
-            text="Obsidian travaille en local, sans API cloud gratuite. On affiche ici la version publiée de ton coffre." />
-          <Notice><b>Voie gratuite recommandée :</b> ton coffre Obsidian n'est qu'un dossier de fichiers Markdown. Publie-le en site statique gratuit avec <b>Quartz</b> (via GitHub Pages) — tu obtiens une URL publique à coller dans les réglages, affichée ci-dessus. Alternative : synchronise le coffre dans Drive et consulte-le depuis l'onglet Banque d'image.</Notice>
-          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Indiquer l'URL du coffre publié</button>
+function WikiNotion({ register }) {
+  const seed = [{
+    id: "home", title: "Accueil du wiki", parentId: null, emoji: "📜", tags: [],
+    content: "Bienvenue dans ton wiki.\n\nCrée des pages, organise-les en arborescence et relie-les avec la syntaxe [[Titre de page]].\n\n# Pour commencer\n- Clique sur **Nouvelle page** à gauche\n- Survole une page pour lui ajouter une sous-page\n- Écris [[un titre]] pour créer un lien vers une autre page",
+  }];
+  const [pages, setPages] = usePersistent("scr.wiki", seed);
+  const [selId, setSelId] = useState(pages[0] ? pages[0].id : null);
+  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState({});
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => { register(pages); }, [pages, register]);
+  useEffect(() => { if (!pages.find((p) => p.id === selId)) setSelId(pages[0] ? pages[0].id : null); }, [pages, selId]);
+
+  const sel = pages.find((p) => p.id === selId) || null;
+  const update = (id, patch) => setPages((l) => l.map((p) => p.id === id ? { ...p, ...patch } : p));
+
+  const addPage = (parentId) => {
+    const id = uid();
+    setPages((l) => [...l, { id, title: "Nouvelle page", parentId: parentId || null, emoji: "📄", tags: [], content: "" }]);
+    if (parentId) setCollapsed((c) => ({ ...c, [parentId]: false }));
+    setSelId(id); setEditing(true);
+  };
+  const delPage = (id) => setPages((l) => {
+    const page = l.find((p) => p.id === id);
+    const par = page ? page.parentId : null;
+    return l.filter((p) => p.id !== id).map((p) => p.parentId === id ? { ...p, parentId: par } : p);
+  });
+
+  const gotoTitle = (title) => {
+    const t = title.trim().toLowerCase();
+    const found = pages.find((p) => (p.title || "").trim().toLowerCase() === t);
+    if (found) { setSelId(found.id); setEditing(false); }
+    else {
+      const id = uid();
+      setPages((l) => [...l, { id, title: title.trim(), parentId: sel ? sel.id : null, emoji: "📄", tags: [], content: "" }]);
+      setSelId(id); setEditing(true);
+    }
+  };
+
+  const renderInline = (text, keyBase) => {
+    const nodes = []; let rest = text; let k = 0;
+    const re = /(\[\[([^\]]+)\]\])|(\*\*([^*]+)\*\*)/;
+    while (rest.length) {
+      const m = rest.match(re);
+      if (!m) { nodes.push(rest); break; }
+      if (m.index > 0) nodes.push(rest.slice(0, m.index));
+      if (m[1]) {
+        const title = m[2];
+        const exists = pages.some((p) => (p.title || "").trim().toLowerCase() === title.trim().toLowerCase());
+        nodes.push(<span key={keyBase + "-" + (k++)} className={"wlink" + (exists ? "" : " missing")} onClick={() => gotoTitle(title)}>{title}</span>);
+      } else if (m[3]) {
+        nodes.push(<strong key={keyBase + "-" + (k++)}>{m[4]}</strong>);
+      }
+      rest = rest.slice(m.index + m[0].length);
+    }
+    return nodes;
+  };
+
+  const renderContent = (text) => {
+    const lines = (text || "").split("\n");
+    const blocks = []; let list = null;
+    lines.forEach((line, i) => {
+      if (line.startsWith("- ")) { if (!list) list = []; list.push(<li key={"li" + i}>{renderInline(line.slice(2), "li" + i)}</li>); return; }
+      if (list) { blocks.push(<ul key={"ul" + i}>{list}</ul>); list = null; }
+      if (line.startsWith("### ")) blocks.push(<h3 key={i}>{renderInline(line.slice(4), "h" + i)}</h3>);
+      else if (line.startsWith("## ")) blocks.push(<h2 key={i}>{renderInline(line.slice(3), "h" + i)}</h2>);
+      else if (line.startsWith("# ")) blocks.push(<h1 key={i}>{renderInline(line.slice(2), "h" + i)}</h1>);
+      else if (line.trim() === "") blocks.push(<div key={i} style={{ height: 8 }} />);
+      else blocks.push(<p key={i}>{renderInline(line, "p" + i)}</p>);
+    });
+    if (list) blocks.push(<ul key="ul-end">{list}</ul>);
+    return blocks;
+  };
+
+  const childrenOf = (pid) => pages.filter((p) => (p.parentId || null) === pid);
+  const renderTree = (pid, depth) => childrenOf(pid).map((p) => {
+    const kids = childrenOf(p.id);
+    const isCol = collapsed[p.id];
+    return (
+      <div key={p.id}>
+        <div className={"wiki-row" + (p.id === selId ? " on" : "")} style={{ paddingLeft: 7 + depth * 14 }}
+          onClick={() => { setSelId(p.id); setEditing(false); }}>
+          <span className="twirl" onClick={(e) => { e.stopPropagation(); if (kids.length) setCollapsed((c) => ({ ...c, [p.id]: !isCol })); }}>
+            {kids.length ? <ChevronRight size={13} style={{ transform: isCol ? "none" : "rotate(90deg)", transition: "transform .15s" }} /> : null}
+          </span>
+          <span className="emoji">{p.emoji || "📄"}</span>
+          <span className="label">{p.title || "Sans titre"}</span>
+          <button className="addk" title="Ajouter une sous-page" onClick={(e) => { e.stopPropagation(); addPage(p.id); }}><Plus size={13} /></button>
         </div>
-      )}
+        {kids.length > 0 && !isCol && renderTree(p.id, depth + 1)}
+      </div>
+    );
+  });
+
+  const results = query ? pages.filter((p) => (p.title + " " + (p.content || "")).toLowerCase().includes(query.toLowerCase())) : null;
+
+  const crumb = (() => {
+    if (!sel) return "";
+    const parts = []; let cur = sel; let guard = 0;
+    while (cur && guard < 20) { parts.unshift(cur.title || "Sans titre"); cur = pages.find((p) => p.id === cur.parentId); guard++; }
+    return parts.join("  ›  ");
+  })();
+
+  return (
+    <Panel icon={BookText} title="Wiki" kicker="Pages liées · base de connaissances" cote="WIK·NOT">
+      <div className="wiki">
+        <div className="wiki-side">
+          <div className="wiki-side-h">
+            <div className="wiki-search">
+              <Search size={14} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une page…" />
+            </div>
+            <button className="btn btn-brass btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => addPage(null)}><Plus size={14} /> Nouvelle page</button>
+          </div>
+          <div className="wiki-tree">
+            {results ? (
+              results.length === 0
+                ? <div style={{ color: "var(--muted)", fontSize: 12.5, padding: "8px 7px" }}>Aucune page.</div>
+                : results.map((p) => (
+                  <div key={p.id} className={"wiki-row" + (p.id === selId ? " on" : "")} onClick={() => { setSelId(p.id); setEditing(false); setQuery(""); }}>
+                    <span className="twirl" /><span className="emoji">{p.emoji || "📄"}</span><span className="label">{p.title || "Sans titre"}</span>
+                  </div>
+                ))
+            ) : (
+              childrenOf(null).length === 0
+                ? <div style={{ color: "var(--muted)", fontSize: 12.5, padding: "8px 7px" }}>Crée ta première page.</div>
+                : renderTree(null, 0)
+            )}
+          </div>
+        </div>
+
+        <div className="wiki-main">
+          {!sel ? (
+            <div style={{ margin: "auto" }}><Empty icon={BookText} title="Aucune page" text="Choisis une page à gauche ou crée-en une nouvelle." /></div>
+          ) : (
+            <>
+              <div className="wiki-bar">
+                <CornerDownRight size={14} style={{ color: "var(--muted)", flex: "none" }} />
+                <span className="crumb">{crumb}</span>
+                <button className="mini" title="Ajouter une sous-page" onClick={() => addPage(sel.id)}><Plus size={14} /></button>
+                <button className="mini" title={editing ? "Aperçu" : "Modifier"} onClick={() => setEditing((e) => !e)}>{editing ? <BookText size={14} /> : <Pencil size={14} />}</button>
+                <button className="mini del" title="Supprimer la page" onClick={() => delPage(sel.id)}><Trash2 size={14} /></button>
+              </div>
+              <div className="wiki-body">
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <input className="wiki-emoji-in" value={sel.emoji || ""} maxLength={2} onChange={(e) => update(sel.id, { emoji: e.target.value })} title="Emoji" />
+                  <input className="wiki-title-in" value={sel.title} onChange={(e) => update(sel.id, { title: e.target.value })} placeholder="Titre de la page" />
+                </div>
+                <div className="wiki-tagrow">
+                  <Filter size={13} style={{ color: "var(--muted)", flex: "none" }} />
+                  <input value={(sel.tags || []).join(", ")} placeholder="étiquettes, séparées par des virgules"
+                    onChange={(e) => update(sel.id, { tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} />
+                </div>
+                {editing ? (
+                  <>
+                    <textarea className="wiki-edit" value={sel.content || ""} onChange={(e) => update(sel.id, { content: e.target.value })}
+                      placeholder="Écris ici…  Lien : [[Titre]] · Titre : # · Sous-titre : ## · Gras : **texte** · Liste : - élément" />
+                    <div className="wiki-hint">Lien : <b>[[Titre]]</b> &nbsp;·&nbsp; Titre : <b># </b> &nbsp;·&nbsp; Sous-titre : <b>## </b> &nbsp;·&nbsp; Gras : <b>**texte**</b> &nbsp;·&nbsp; Liste : <b>- </b></div>
+                  </>
+                ) : (
+                  <div className="wiki-render" onDoubleClick={() => setEditing(true)}>
+                    {(sel.content || "").trim() ? renderContent(sel.content) : <p style={{ color: "var(--muted)" }}>Page vide. Clique sur le crayon (ou double-clique ici) pour l'éditer.</p>}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </Panel>
   );
 }
@@ -1060,19 +1285,39 @@ function Frise({ register }) {
 /*  CRÉATION — X-Mind & Cartothèque                                   */
 /* ------------------------------------------------------------------ */
 
-function XMind({ cfg, openSettings }) {
-  const url = (cfg.xmind || "").trim();
+function Whimsical({ cfg, openSettings }) {
+  const url = (cfg.whimsical || "").trim();
   return (
-    <Panel icon={Network} title="X-Mind" kicker="Cartes mentales" cote="CRE·XMD"
-      right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
+    <Panel icon={Workflow} title="Whimsical" kicker="Cartes, flux & wireframes" cote="CRE·WHM"
+      right={<span style={{ display: "flex", gap: 6 }}>
+        {url && <a className="mini" href={url} target="_blank" rel="noreferrer" title="Ouvrir dans un onglet"><ExternalLink size={15} /></a>}
+        <button className="mini" onClick={openSettings}><Settings size={15} /></button>
+      </span>}>
       {url ? (
-        <iframe title="xmind" className="frame" src={url} style={{ height: 420 }} />
+        <iframe title="whimsical" className="frame" src={url} style={{ height: 440 }} />
       ) : (
         <div>
-          <Empty icon={Network} title="Aucune carte reliée"
-            text="Structure tes idées en arborescence : hypothèses, plan de mémoire, généalogie d'un concept." />
-          <Notice><b>X-Mind</b> est un logiciel de bureau. Partage une carte avec « XMind » (lien public) et colle l'URL ici pour l'afficher. Alternative gratuite et embarquable directement : <b>Excalidraw</b> ou <b>Whimsical</b> via un lien partagé.</Notice>
-          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Indiquer un lien de carte</button>
+          <Empty icon={Workflow} title="Aucun tableau relié"
+            text="Cartes mentales, organigrammes, flux et wireframes — structure tes idées visuellement." />
+          <Notice><b>Whimsical</b> : ouvre ton tableau, clique <i>Share</i>, active le lien public, puis colle l'URL dans les réglages pour l'afficher ici. Tes exports se rangent dans le bloc « Sauvegardes » ci-dessous.</Notice>
+          <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Indiquer le lien du tableau</button>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function CreationStorage({ cfg, openSettings }) {
+  const id = (cfg.createFolder || "").trim();
+  return (
+    <Panel icon={FolderOpen} title="Sauvegardes" kicker="Fichiers Whimsical & Excalidraw · Google Drive" cote="CRE·SAV"
+      right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
+      <DriveBody cfg={cfg} folderId={id} mode="grid" openSettings={openSettings} badge="Création"
+        emptyText="Range ici les exports de Whimsical et d'Excalidraw, et retrouve-les pour les rouvrir." />
+      {id && (
+        <div className="notice" style={{ marginTop: 12 }}>
+          <Info size={17} className="ico" />
+          <div><b>Réimporter :</b> télécharge un fichier depuis ce dossier, puis — dans <b>Excalidraw</b>, menu → <i>Open</i> (fichiers <i>.excalidraw</i>) ou glisse-le sur la zone de dessin ; dans <b>Whimsical</b>, insère l'image exportée. <b>Exporter :</b> Excalidraw → <i>Save to… / Export image</i> ; Whimsical → <i>Export</i> (PNG/PDF), à enregistrer dans ce dossier Drive.</div>
         </div>
       )}
     </Panel>
@@ -1117,29 +1362,18 @@ function SettingsModal({ cfg, setCfg, onClose }) {
         </div>
 
         <div className="set-group">
-          <h5><BookMarked size={13} /> Zotero</h5>
-          <div className="row">
-            <div className="field" style={{ flex: ".6" }}><label>Type</label>
-              <select className="inp" value={d.zoteroType || "user"} onChange={f("zoteroType")}>
-                <option value="user">Utilisateur</option><option value="group">Groupe</option>
-              </select></div>
-            <div className="field"><label>Identifiant</label><input className="inp" value={d.zoteroId || ""} onChange={f("zoteroId")} placeholder="ex. 1234567" /></div>
-          </div>
-          <div className="field"><label>Clé API (si bibliothèque privée)</label><input className="inp" value={d.zoteroKey || ""} onChange={f("zoteroKey")} placeholder="facultatif" /></div>
-        </div>
-
-        <div className="set-group">
           <h5><FolderOpen size={13} /> Google Drive</h5>
+          <div className="field"><label>Clé API Google Drive (pour les aperçus visuels)</label><input className="inp" value={d.driveKey || ""} onChange={f("driveKey")} placeholder="facultatif — vignettes intégrées au thème" /></div>
           <div className="field"><label>Dossier « Documents Word » (Accueil)</label><input className="inp" value={d.docFolder || ""} onChange={f("docFolder")} placeholder="ID après /folders/ dans l'URL Drive" /></div>
           <div className="field"><label>Dossier « Banque d'image »</label><input className="inp" value={d.imgFolder || ""} onChange={f("imgFolder")} placeholder="ID du dossier Drive" /></div>
           <div className="field"><label>Dossier « Livres &amp; PDF »</label><input className="inp" value={d.pdfFolder || ""} onChange={f("pdfFolder")} placeholder="ID du dossier Drive" /></div>
           <div className="field"><label>Dossier « Cartothèque » (Création)</label><input className="inp" value={d.cartoFolder || ""} onChange={f("cartoFolder")} placeholder="ID du dossier Drive" /></div>
+          <div className="field"><label>Dossier « Sauvegardes création » (Whimsical/Excalidraw)</label><input className="inp" value={d.createFolder || ""} onChange={f("createFolder")} placeholder="ID du dossier Drive" /></div>
         </div>
 
         <div className="set-group">
-          <h5><Network size={13} /> Wiki & création</h5>
-          <div className="field"><label>URL du coffre Obsidian publié</label><input className="inp" value={d.obsidian || ""} onChange={f("obsidian")} placeholder="https://…" /></div>
-          <div className="field"><label>Lien d'une carte X-Mind</label><input className="inp" value={d.xmind || ""} onChange={f("xmind")} placeholder="https://…" /></div>
+          <h5><Network size={13} /> Création</h5>
+          <div className="field"><label>Lien d'un tableau Whimsical (public)</label><input className="inp" value={d.whimsical || ""} onChange={f("whimsical")} placeholder="https://whimsical.com/…" /></div>
           <div className="field"><label>Lien d'un tableau Excalidraw partagé</label><input className="inp" value={d.excalidraw || ""} onChange={f("excalidraw")} placeholder="https://excalidraw.com/#json=…" /></div>
         </div>
 
@@ -1180,17 +1414,17 @@ export default function App() {
   }, [navOpen]);
 
   // index partagé pour l'assistant
-  const idx = useRef({ citations: [], people: [], events: [], zotero: [] });
+  const idx = useRef({ citations: [], people: [], events: [], wiki: [] });
   const buildIndex = useCallback(() => ({
     citations: idx.current.citations.map((c) => ({ texte: (c.text || "").slice(0, 140), auteur: c.author, source: c.source, motsCles: c.tags })),
     personnes: idx.current.people.map((p) => ({ nom: p.name, dates: `${p.birth || "?"}-${p.death || "?"}`, fonction: p.role, lieu: p.place })),
     evenements: idx.current.events.map((e) => ({ annee: e.year, titre: e.title, categorie: e.cat })),
-    zotero: idx.current.zotero.map((z) => ({ titre: z.title, auteurs: z.creators, date: z.date })),
+    wiki: idx.current.wiki.map((w) => ({ titre: w.title, etiquettes: w.tags })),
   }), []);
   const regCitations = useCallback((v) => { idx.current.citations = v; }, []);
   const regPeople = useCallback((v) => { idx.current.people = v; }, []);
   const regEvents = useCallback((v) => { idx.current.events = v; }, []);
-  const regZotero = useCallback((v) => { idx.current.zotero = v; }, []);
+  const regWiki = useCallback((v) => { idx.current.wiki = v; }, []);
 
   const openS = () => setShowSettings(true);
 
@@ -1285,24 +1519,17 @@ export default function App() {
             <div className="view-head">
               <div className="eyebrow">Fonds documentaire</div>
               <h1 className="view-title">Bibliothèque</h1>
-              <p className="view-note">Références, citations, images et ouvrages. Zotero relié à ta bibliothèque, le reste adossé à ton Drive. Tropy dispose de sa propre page (menu Bibliothèque).</p>
-            </div>
-            <div style={{ marginBottom: 22 }}>
-              <Zotero cfg={cfg} openSettings={openS} onItems={regZotero} />
-            </div>
-
-            <div className="view-head" style={{ marginBottom: 14 }}>
-              <div className="eyebrow">Citations, images & ouvrages</div>
+              <p className="view-note">Citations, iconographie et ouvrages, adossés à ton Drive. Tropy dispose de sa propre page (menu Bibliothèque).</p>
             </div>
             <div className="grid g-2" style={{ marginBottom: 18 }}>
               <Citations register={regCitations} />
               <DriveEmbed icon={ImageIcon} title="Banque d'image" kicker="Iconographie · planches" cote="BIB·IMG"
-                folderId={cfg.imgFolder} mode="grid" openSettings={openS}
-                emptyText="Centralise ton iconographie depuis un dossier Drive partagé, visible directement ici." />
+                folderId={cfg.imgFolder} mode="grid" cfg={cfg} badge="Image" openSettings={openS}
+                emptyText="Centralise ton iconographie depuis un dossier Drive partagé, avec aperçu, directement ici." />
             </div>
             <DriveEmbed icon={FileText} title="Livres & PDF" kicker="Ouvrages numérisés" cote="BIB·PDF"
-              folderId={cfg.pdfFolder} mode="list" openSettings={openS}
-              emptyText="Range tes ouvrages et numérisations dans un dossier Drive pour les consulter sans quitter le tableau de bord." />
+              folderId={cfg.pdfFolder} mode="grid" cfg={cfg} badge="PDF" openSettings={openS}
+              emptyText="Range tes ouvrages et numérisations dans un dossier Drive pour les consulter, en aperçu, sans quitter le tableau de bord." />
           </div>
         )}
 
@@ -1324,9 +1551,9 @@ export default function App() {
             <div className="view-head">
               <div className="eyebrow">Savoir structuré</div>
               <h1 className="view-title">Wiki</h1>
-              <p className="view-note">Tes connaissances organisées : notes liées d'Obsidian, répertoire prosopographique et frise chronologique.</p>
+              <p className="view-note">Tes connaissances organisées : un wiki de pages liées, le répertoire prosopographique et la frise chronologique.</p>
             </div>
-            <div style={{ marginBottom: 18 }}><Obsidian cfg={cfg} openSettings={openS} /></div>
+            <div style={{ marginBottom: 18 }}><WikiNotion register={regWiki} /></div>
             <div className="grid g-2">
               <Prosopographie register={regPeople} />
               <Frise register={regEvents} />
@@ -1340,15 +1567,18 @@ export default function App() {
             <div className="view-head">
               <div className="eyebrow">Penser visuellement</div>
               <h1 className="view-title">Création</h1>
-              <p className="view-note">Donne forme à tes idées : cartes mentales, croquis à main levée et collection cartographique.</p>
+              <p className="view-note">Donne forme à tes idées : tableaux Whimsical, croquis Excalidraw, sauvegardes de tes créations et collection cartographique.</p>
             </div>
             <div className="grid g-2" style={{ marginBottom: 18 }}>
-              <XMind cfg={cfg} openSettings={openS} />
+              <Whimsical cfg={cfg} openSettings={openS} />
               <Excalidraw cfg={cfg} openSettings={openS} />
             </div>
+            <div style={{ marginBottom: 18 }}>
+              <CreationStorage cfg={cfg} openSettings={openS} />
+            </div>
             <DriveEmbed icon={MapIcon} title="Cartothèque" kicker="Cartes & relevés · Google Drive" cote="CRE·CAR"
-              folderId={cfg.cartoFolder} mode="grid" openSettings={openS}
-              emptyText="Consulte ta collection de cartes depuis un dossier Drive partagé, directement ici." />
+              folderId={cfg.cartoFolder} mode="grid" cfg={cfg} badge="Carte" openSettings={openS}
+              emptyText="Consulte ta collection de cartes depuis un dossier Drive partagé, en aperçu, directement ici." />
           </div>
         )}
 
