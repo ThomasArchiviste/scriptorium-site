@@ -65,22 +65,20 @@ Tout se configure depuis l'icône **Réglages** (en haut à droite). Les donnée
 dans le navigateur (localStorage).
 
 - **Dossiers Google Drive** : partage-les « toute personne disposant du lien » et
-  colle l'identifiant (partie après `/folders/`). Les fichiers s'affichent alors en
-  **aperçu (grille de vignettes)** directement dans le site, sans autre réglage.
-- **Clé API Google Drive** (facultative) : si elle est renseignée et que le dossier
-  est listable, l'affichage passe à une **galerie thémée** (vignettes + noms aux
-  couleurs du site). Sinon, l'aperçu Drive natif reste utilisé.
+  colle l'**ID ou l'URL complète** du dossier. Pour les afficher **dans le thème du
+  site** (vignettes + noms), une **clé API Google Drive** est nécessaire — l'aperçu
+  de Google ne pouvant pas être re-thémé. Sans clé : bouton « Ouvrir dans Drive ».
+- **Clé API Google Drive** : crée-la dans Google Cloud (API Drive activée), en
+  lecture seule, puis renseigne-la dans les réglages.
 - **Agenda** : adresse Google Agenda ou lien d'intégration ; bouton clair/sombre
-  intégré au bloc.
-- **Tropy** : import d'un export JSON-LD (page dédiée via le menu Bibliothèque) →
-  inventaire de fiches consultables. Pour voir les clichés, relie un dossier Drive
-  « Clichés Tropy ».
-- **Wiki** : pages liées façon Notion (arborescence, recherche, liens `[[Titre]]`,
-  étiquettes) — entièrement éditable, rien à connecter.
-- **Excalidraw** : éditeur intégré nativement ; les croquis se créent et
-  s'enregistrent **directement dans le site** (localStorage), rien à télécharger.
-- **Whimsical** : utilise le lien d'**intégration public** (Share → Embed → Enable
-  public access). L'URL normale du tableau est convertie automatiquement.
+  intégré au bloc. Le format 24 h suit le réglage « Langue et région » du compte Google.
+- **Tropy** : import d'un export JSON-LD → inventaire de fiches. Clichés via un dossier Drive.
+- **Wiki** : pages liées façon Notion (arborescence, recherche, `[[liens]]`, **gras**,
+  *italique*, étiquettes) — éditable, rien à connecter.
+- **Création** : **Excalidraw** (croquis) et **Tableau blanc / tldraw** (diagrammes,
+  flux, wireframes) sont intégrés et **éditables** ; les créations s'enregistrent
+  **dans le site** et apparaissent en aperçu dans le bloc **Sauvegardes**, rouvrables
+  d'un clic. (Whimsical, produit fermé, ne peut pas être édité en intégration.)
 
 ## Aller plus loin (optionnel)
 
