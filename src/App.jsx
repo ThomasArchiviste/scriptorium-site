@@ -6,6 +6,8 @@ import {
   Library, Save, Info, Link2, ArrowRight, BookMarked, ChevronDown, Filter,
   Moon, Sun, BookText, CornerDownRight, Workflow
 } from "lucide-react";
+import { Excalidraw as ExcalidrawCanvas } from "@excalidraw/excalidraw";
+import "@excalidraw/excalidraw/index.css";
 
 /* ------------------------------------------------------------------ */
 /*  Thème — « Scriptorium » : cabinet de travail d'historien, le soir  */
@@ -238,6 +240,8 @@ textarea.inp{resize:vertical; min-height:72px; line-height:1.5}
 /* Agenda — filtre thème sombre */
 .agenda-wrap{border:1px solid var(--line); border-radius:2px; overflow:hidden; background:var(--ink2)}
 .agenda-wrap.dark iframe{filter:invert(0.9) hue-rotate(180deg) saturate(0.85) contrast(0.95)}
+.excali-wrap{position:relative; height:480px; border:1px solid var(--line); border-radius:3px; overflow:hidden; background:#fff}
+.excali-wrap .excalidraw{height:100%}
 .agenda-wrap iframe{display:block}
 
 /* Wiki façon Notion */
@@ -450,8 +454,8 @@ function Agenda({ cfg, openSettings }) {
   const src = useMemo(() => {
     const v = (cfg.calendar || "").trim();
     if (!v) return "";
-    if (v.startsWith("http")) return v;
-    return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(v)}&ctz=Europe/Paris&mode=AGENDA&bgcolor=%23FFFFFF`;
+    if (v.startsWith("http")) return v.includes("hl=") ? v : v + (v.includes("?") ? "&" : "?") + "hl=fr";
+    return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(v)}&ctz=Europe/Paris&mode=AGENDA&hl=fr&bgcolor=%23FFFFFF`;
   }, [cfg.calendar]);
   return (
     <Panel icon={Calendar} title="Agenda" kicker="Google Agenda" cote="ACC·AG"
@@ -659,47 +663,95 @@ const COLS = [{ k: "afaire", l: "À faire" }, { k: "encours", l: "En cours" }, {
 /*  BIBLIOTHÈQUE — Tropy (import JSON-LD, lecture)                     */
 /* ------------------------------------------------------------------ */
 
-function Tropy() {
+function Tropy({ cfg, openSettings }) {
   const [items, setItems] = usePersistent("scr.tropy", []);
+  const [query, setQuery] = useState("");
   const fileRef = useRef(null);
 
+  const clean = (s) => {
+    if (typeof s === "string") return s;
+    if (Array.isArray(s)) return s.map(clean).filter(Boolean).join(", ");
+    if (s && typeof s === "object") return s["@value"] || s.value || "";
+    return "";
+  };
   const importJson = (file) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        const graph = data["@graph"] || data.items || (Array.isArray(data) ? data : []);
-        const mapped = (graph || []).map((it) => ({
-          id: uid(),
-          title: it.title || it["http://purl.org/dc/elements/1.1/title"] || it.name || "(document)",
-          type: it.type || it["@type"] || "",
-          date: it.date || "",
-        })).filter((x) => x.title);
-        setItems(mapped.length ? mapped : []);
+        const graph = data["@graph"] || data.items || (Array.isArray(data) ? data : [data]);
+        const mapped = (graph || []).map((it) => {
+          const findKey = (suf) => Object.keys(it).find((k) => k.toLowerCase().endsWith(suf));
+          const title = clean(it[findKey("title")]) || it.name || "(document)";
+          const meta = {};
+          Object.keys(it).forEach((k) => {
+            if (["@id", "@type", "@context", "template", "photo", "selection", "list"].includes(k)) return;
+            const label = k.split(/[\/#]/).pop();
+            const val = clean(it[k]);
+            if (val && label && label.toLowerCase() !== "title") meta[label] = val;
+          });
+          const photos = Array.isArray(it.photo) ? it.photo.length : (it.photo ? 1 : 0);
+          return { id: uid(), title, type: clean(it["@type"]), meta, photos };
+        }).filter((x) => (x.title && x.title !== "(document)") || Object.keys(x.meta || {}).length);
+        if (!mapped.length) { alert("Aucun élément trouvé. Exporte tes éléments en JSON-LD depuis Tropy."); return; }
+        setItems(mapped);
       } catch (e) { alert("Fichier illisible : exporte tes éléments Tropy en JSON-LD."); }
     };
     reader.readAsText(file);
   };
 
+  const filtered = items.filter((i) => !query || (i.title + " " + Object.values(i.meta || {}).join(" ")).toLowerCase().includes(query.toLowerCase()));
+
   return (
-    <Panel icon={ImageIcon} title="Tropy" kicker="Photographies d'archives" cote="BIB·TRO"
-      right={<button className="mini" onClick={() => fileRef.current && fileRef.current.click()}><Upload size={15} /></button>}>
-      <input ref={fileRef} type="file" accept=".json,.jsonld" style={{ display: "none" }}
-        onChange={(e) => e.target.files[0] && importJson(e.target.files[0])} />
-      <Notice><b>Tropy est un logiciel de bureau</b> (données en local, pas d'API web). La voie fiable et gratuite : dans Tropy, <b>Exporter en JSON-LD</b>, puis importer le fichier ici pour consulter l'inventaire. Pour voir les images elles-mêmes, range-les dans ton Drive (onglet Banque d'image).</Notice>
-      {items.length > 0 && (
-        <div className="scroll" style={{ maxHeight: 260, marginTop: 12 }}>
-          {items.map((i) => (
-            <div className="item" key={i.id}>
-              <div className="item-t" style={{ fontSize: 16 }}>{i.title}</div>
-              {(i.type || i.date) && <div className="item-m">{[i.date, i.type].filter(Boolean).join(" · ")}</div>}
+    <div>
+      <Panel icon={ImageIcon} title="Tropy — inventaire" kicker="Métadonnées des photographies d'archives" cote="BIB·TRO"
+        right={<button className="mini" title="Importer un export JSON-LD" onClick={() => fileRef.current && fileRef.current.click()}><Upload size={15} /></button>}>
+        <input ref={fileRef} type="file" accept=".json,.jsonld" style={{ display: "none" }}
+          onChange={(e) => e.target.files[0] && importJson(e.target.files[0])} />
+        {items.length === 0 ? (
+          <div>
+            <Empty icon={ImageIcon} title="Inventaire vide"
+              text="Importe un export JSON-LD de Tropy pour retrouver ici tout l'inventaire : titres, métadonnées complètes et nombre de clichés, avec recherche." />
+            <Notice><b>Pourquoi un import ?</b> Tropy est un logiciel de bureau (base de données locale, sans API web) : aucune connexion temps réel n'est possible. L'export JSON-LD est la voie officielle ; il est rejoué ici en fiches consultables. Pour <b>voir les clichés</b>, relie ci-dessous le dossier Drive où tu les ranges.</Notice>
+            <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
+              onClick={() => fileRef.current && fileRef.current.click()}><Upload size={15} /> Importer un export JSON-LD</button>
+          </div>
+        ) : (
+          <div>
+            <div className="filterbar">
+              <div className="topsearch"><Search size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher dans l'inventaire…" /></div>
+              <button className="btn btn-ghost btn-sm" onClick={() => fileRef.current && fileRef.current.click()}><Upload size={13} /> Réimporter</button>
             </div>
-          ))}
-        </div>
-      )}
-      <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
-        onClick={() => fileRef.current && fileRef.current.click()}><Upload size={15} /> Importer un export JSON-LD</button>
-    </Panel>
+            <div className="scroll" style={{ maxHeight: 420 }}>
+              {filtered.map((i) => (
+                <div className="item" key={i.id}>
+                  <div className="item-t" style={{ fontSize: 17 }}>{i.title}</div>
+                  <div className="item-m">{[i.type, i.photos ? i.photos + " cliché" + (i.photos > 1 ? "s" : "") : ""].filter(Boolean).join(" · ")}</div>
+                  {Object.keys(i.meta || {}).length > 0 && (
+                    <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "auto 1fr", gap: "3px 12px", fontSize: 12.5 }}>
+                      {Object.entries(i.meta).slice(0, 8).map(([k, v]) => (
+                        <React.Fragment key={k}>
+                          <span style={{ color: "var(--brass)", textTransform: "capitalize" }}>{k}</span>
+                          <span style={{ color: "var(--vellum-dim)" }}>{v}</span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Panel>
+
+      <div style={{ marginTop: 18 }}>
+        <Panel icon={ImageIcon} title="Tropy — clichés" kicker="Images reliées · Google Drive" cote="BIB·TRO·IMG"
+          right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
+          <DriveBody cfg={cfg} folderId={(cfg.tropyFolder || "").trim()} mode="grid" openSettings={openSettings} badge="Cliché"
+            emptyText="Range les photographies exportées de Tropy dans un dossier Drive pour les consulter ici, en regard de l'inventaire." />
+        </Panel>
+      </div>
+    </div>
   );
 }
 
@@ -841,18 +893,22 @@ function DriveBody({ cfg, folderId, mode, emptyText, openSettings, badge }) {
     return (
       <div>
         <Empty icon={FolderOpen} title="Dossier non relié" text={emptyText} />
-        <Notice><b>Pour des aperçus visuels :</b> renseigne une <b>clé API Google Drive</b> (gratuite) et l'identifiant d'un dossier partagé « avec le lien », dans les réglages. Sans clé, le dossier s'affiche via l'aperçu standard de Drive.</Notice>
         <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Relier un dossier Drive</button>
       </div>
     );
   }
 
   if (!apiKey) {
-    const src = `https://drive.google.com/embeddedfolderview?id=${folderId}#${mode || "grid"}`;
     return (
       <div>
-        <iframe title="drive" className="frame" src={src} style={{ height: 380 }} />
-        <Notice>Pour des vignettes intégrées au thème et des noms lisibles, ajoute une <b>clé API Google Drive</b> dans les réglages.</Notice>
+        <div className="notice" style={{ marginBottom: 12 }}>
+          <Info size={17} className="ico" />
+          <div>Ajoute une <b>clé API Google Drive</b> (gratuite) dans les réglages pour afficher tes fichiers <b>ici même, avec aperçu et noms lisibles</b>. En attendant, ouvre le dossier dans Drive.</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-brass btn-sm" onClick={openSettings}><Settings size={14} /> Ajouter la clé</button>
+          <a className="btn btn-ghost btn-sm" href={`https://drive.google.com/drive/folders/${folderId}`} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Ouvrir dans Drive</a>
+        </div>
       </div>
     );
   }
@@ -1285,21 +1341,41 @@ function Frise({ register }) {
 /*  CRÉATION — X-Mind & Cartothèque                                   */
 /* ------------------------------------------------------------------ */
 
+function whimsicalEmbed(u) {
+  const s = (u || "").trim();
+  if (!s) return "";
+  if (s.includes("/embed/")) return s;
+  try {
+    const url = new URL(s);
+    const seg = url.pathname.split("/").filter(Boolean).pop() || "";
+    const id = seg.includes("-") ? seg.split("-").pop() : seg;
+    if (id) return "https://whimsical.com/embed/" + id;
+  } catch (e) { /* pas une URL */ }
+  return s;
+}
+
 function Whimsical({ cfg, openSettings }) {
-  const url = (cfg.whimsical || "").trim();
+  const raw = (cfg.whimsical || "").trim();
+  const src = whimsicalEmbed(raw);
   return (
     <Panel icon={Workflow} title="Whimsical" kicker="Cartes, flux & wireframes" cote="CRE·WHM"
       right={<span style={{ display: "flex", gap: 6 }}>
-        {url && <a className="mini" href={url} target="_blank" rel="noreferrer" title="Ouvrir dans un onglet"><ExternalLink size={15} /></a>}
+        {raw && <a className="mini" href={raw} target="_blank" rel="noreferrer" title="Ouvrir dans un onglet"><ExternalLink size={15} /></a>}
         <button className="mini" onClick={openSettings}><Settings size={15} /></button>
       </span>}>
-      {url ? (
-        <iframe title="whimsical" className="frame" src={url} style={{ height: 440 }} />
+      {src ? (
+        <>
+          <iframe title="whimsical" className="frame" src={src} style={{ height: 440 }} allowFullScreen />
+          <div className="notice" style={{ marginTop: 12 }}>
+            <Info size={17} className="ico" />
+            <div>Tableau blanc ou erreur ? Dans Whimsical : <i>Share → Embed</i>, puis active <b>« Enable public access »</b> (sans accès public, il faut être connecté à Whimsical dans ce navigateur).</div>
+          </div>
+        </>
       ) : (
         <div>
           <Empty icon={Workflow} title="Aucun tableau relié"
             text="Cartes mentales, organigrammes, flux et wireframes — structure tes idées visuellement." />
-          <Notice><b>Whimsical</b> : ouvre ton tableau, clique <i>Share</i>, active le lien public, puis colle l'URL dans les réglages pour l'afficher ici. Tes exports se rangent dans le bloc « Sauvegardes » ci-dessous.</Notice>
+          <Notice><b>À savoir :</b> seul le lien d'<b>intégration public</b> de Whimsical s'affiche en page (l'URL normale du tableau est bloquée à l'affichage). Dans Whimsical : <i>Share → Embed</i>, active <b>« Enable public access »</b>, puis colle le lien (ou l'URL du tableau) dans les réglages — je le convertis automatiquement au bon format.</Notice>
           <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={openSettings}><Link2 size={15} /> Indiquer le lien du tableau</button>
         </div>
       )}
@@ -1310,33 +1386,75 @@ function Whimsical({ cfg, openSettings }) {
 function CreationStorage({ cfg, openSettings }) {
   const id = (cfg.createFolder || "").trim();
   return (
-    <Panel icon={FolderOpen} title="Sauvegardes" kicker="Fichiers Whimsical & Excalidraw · Google Drive" cote="CRE·SAV"
+    <Panel icon={FolderOpen} title="Sauvegardes" kicker="Exports Whimsical & archives · Google Drive" cote="CRE·SAV"
       right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
       <DriveBody cfg={cfg} folderId={id} mode="grid" openSettings={openSettings} badge="Création"
-        emptyText="Range ici les exports de Whimsical et d'Excalidraw, et retrouve-les pour les rouvrir." />
+        emptyText="Un dossier Drive pour conserver tes exports Whimsical et toute archive de création." />
       {id && (
         <div className="notice" style={{ marginTop: 12 }}>
           <Info size={17} className="ico" />
-          <div><b>Réimporter :</b> télécharge un fichier depuis ce dossier, puis — dans <b>Excalidraw</b>, menu → <i>Open</i> (fichiers <i>.excalidraw</i>) ou glisse-le sur la zone de dessin ; dans <b>Whimsical</b>, insère l'image exportée. <b>Exporter :</b> Excalidraw → <i>Save to… / Export image</i> ; Whimsical → <i>Export</i> (PNG/PDF), à enregistrer dans ce dossier Drive.</div>
+          <div>Tes croquis <b>Excalidraw sont déjà enregistrés dans le site</b> (bloc ci-dessus) — pas besoin de Drive pour eux. Ce dossier sert aux <b>exports Whimsical</b> (Share → Export, PNG/PDF) et aux archives. L'enregistrement automatique <i>depuis</i> le site <i>vers</i> Drive demanderait la connexion Google (OAuth) : pour l'instant, dépose les fichiers dans Drive manuellement.</div>
         </div>
       )}
     </Panel>
   );
 }
 
-function Excalidraw({ cfg, openSettings }) {
-  const url = (cfg.excalidraw || "").trim() || "https://excalidraw.com/";
-  const custom = !!(cfg.excalidraw || "").trim();
+function ExcalidrawBlock() {
+  const [drawings, setDrawings] = usePersistent("scr.excalidraw", []); // [{id, name, elements, files}]
+  const [currentId, setCurrentId] = useState(null);
+  const [name, setName] = useState("");
+  const [loadKey, setLoadKey] = useState(0);
+  const dataRef = useRef({ elements: [], files: {} });
+  const initialRef = useRef({ elements: [], files: {} });
+
+  const newDrawing = () => {
+    initialRef.current = { elements: [], files: {} };
+    dataRef.current = { elements: [], files: {} };
+    setCurrentId(null); setName(""); setLoadKey((k) => k + 1);
+  };
+  const loadDrawing = (d) => {
+    initialRef.current = { elements: d.elements || [], files: d.files || {} };
+    dataRef.current = { elements: d.elements || [], files: d.files || {} };
+    setCurrentId(d.id); setName(d.name || ""); setLoadKey((k) => k + 1);
+  };
+  const saveDrawing = () => {
+    const nm = name.trim() || ("Croquis " + new Date().toLocaleDateString("fr"));
+    const payload = { elements: dataRef.current.elements || [], files: dataRef.current.files || {} };
+    if (currentId) {
+      setDrawings((l) => l.map((d) => d.id === currentId ? { ...d, name: nm, ...payload } : d));
+    } else {
+      const id = uid();
+      setDrawings((l) => [...l, { id, name: nm, ...payload }]);
+      setCurrentId(id);
+    }
+    setName(nm);
+  };
+  const delDrawing = (id) => { setDrawings((l) => l.filter((d) => d.id !== id)); if (id === currentId) newDrawing(); };
+
   return (
-    <Panel icon={PenTool} title="Excalidraw" kicker="Croquis & schémas à main levée" cote="CRE·EXC"
-      right={<span style={{ display: "flex", gap: 6 }}>
-        <a className="mini" href={url} target="_blank" rel="noreferrer" title="Ouvrir dans un onglet"><ExternalLink size={15} /></a>
-        <button className="mini" onClick={openSettings}><Settings size={15} /></button>
-      </span>}>
-      <iframe title="excalidraw" className="frame" src={url} style={{ height: 440 }} allow="clipboard-read; clipboard-write" />
-      <Notice>{custom
-        ? <>Ton tableau partagé s'affiche ici. Toute modification est à enregistrer côté Excalidraw (lien partagé) pour la retrouver.</>
-        : <>Dessine directement ici. Pour <b>retrouver</b> un croquis plus tard, enregistre-le dans Excalidraw (menu → <i>Save to… / Share</i>), puis colle le lien dans les réglages : il s'ouvrira ici à chaque fois.</>}</Notice>
+    <Panel icon={PenTool} title="Excalidraw" kicker="Croquis & schémas — enregistrés dans le site" cote="CRE·EXC"
+      right={<button className="mini" title="Nouveau croquis" onClick={newDrawing}><Plus size={16} /></button>}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <input className="inp" style={{ flex: 1, minWidth: 150 }} value={name} onChange={(e) => setName(e.target.value)}
+          placeholder={currentId ? "Renommer ce croquis" : "Nom du nouveau croquis"} />
+        <button className="btn btn-brass btn-sm" onClick={saveDrawing}><Save size={14} /> {currentId ? "Enregistrer" : "Créer"}</button>
+      </div>
+      {drawings.length > 0 && (
+        <div className="tags" style={{ marginBottom: 10 }}>
+          {drawings.map((d) => (
+            <span key={d.id} className={"tag " + (d.id === currentId ? "on" : "")} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <span onClick={() => loadDrawing(d)} style={{ cursor: "pointer" }}>{d.name}</span>
+              <X size={11} style={{ cursor: "pointer", opacity: .7 }} onClick={() => delDrawing(d.id)} />
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="excali-wrap">
+        <ExcalidrawCanvas key={loadKey} theme="dark" initialData={initialRef.current}
+          onChange={(elements, appState, files) => { dataRef.current = { elements, files }; }} />
+      </div>
+      <div className="wiki-hint" style={{ marginTop: 8 }}>Dessine, nomme ton croquis puis <b>Enregistrer</b> — tout reste dans le site, rien à télécharger. Clique une vignette pour rouvrir un croquis.</div>
     </Panel>
   );
 }
@@ -1367,14 +1485,15 @@ function SettingsModal({ cfg, setCfg, onClose }) {
           <div className="field"><label>Dossier « Documents Word » (Accueil)</label><input className="inp" value={d.docFolder || ""} onChange={f("docFolder")} placeholder="ID après /folders/ dans l'URL Drive" /></div>
           <div className="field"><label>Dossier « Banque d'image »</label><input className="inp" value={d.imgFolder || ""} onChange={f("imgFolder")} placeholder="ID du dossier Drive" /></div>
           <div className="field"><label>Dossier « Livres &amp; PDF »</label><input className="inp" value={d.pdfFolder || ""} onChange={f("pdfFolder")} placeholder="ID du dossier Drive" /></div>
+          <div className="field"><label>Dossier « Clichés Tropy »</label><input className="inp" value={d.tropyFolder || ""} onChange={f("tropyFolder")} placeholder="ID du dossier Drive" /></div>
           <div className="field"><label>Dossier « Cartothèque » (Création)</label><input className="inp" value={d.cartoFolder || ""} onChange={f("cartoFolder")} placeholder="ID du dossier Drive" /></div>
-          <div className="field"><label>Dossier « Sauvegardes création » (Whimsical/Excalidraw)</label><input className="inp" value={d.createFolder || ""} onChange={f("createFolder")} placeholder="ID du dossier Drive" /></div>
+          <div className="field"><label>Dossier « Sauvegardes création » (exports Whimsical)</label><input className="inp" value={d.createFolder || ""} onChange={f("createFolder")} placeholder="ID du dossier Drive" /></div>
         </div>
 
         <div className="set-group">
           <h5><Network size={13} /> Création</h5>
-          <div className="field"><label>Lien d'un tableau Whimsical (public)</label><input className="inp" value={d.whimsical || ""} onChange={f("whimsical")} placeholder="https://whimsical.com/…" /></div>
-          <div className="field"><label>Lien d'un tableau Excalidraw partagé</label><input className="inp" value={d.excalidraw || ""} onChange={f("excalidraw")} placeholder="https://excalidraw.com/#json=…" /></div>
+          <div className="field"><label>Lien d'un tableau Whimsical (intégration publique)</label><input className="inp" value={d.whimsical || ""} onChange={f("whimsical")} placeholder="https://whimsical.com/…" /></div>
+          <p className="sub" style={{ margin: 0 }}>Excalidraw est intégré nativement : les croquis se créent et s'enregistrent directement dans le site, rien à configurer.</p>
         </div>
 
         <button className="btn btn-brass" style={{ width: "100%", justifyContent: "center", marginTop: 18 }}
@@ -1541,7 +1660,7 @@ export default function App() {
               <h1 className="view-title">Tropy</h1>
               <p className="view-note">Tes photographies d'archives, sur leur page dédiée. Importe un export JSON-LD depuis Tropy pour consulter l'inventaire ici.</p>
             </div>
-            <Tropy />
+            <Tropy cfg={cfg} openSettings={openS} />
           </div>
         )}
 
@@ -1571,7 +1690,7 @@ export default function App() {
             </div>
             <div className="grid g-2" style={{ marginBottom: 18 }}>
               <Whimsical cfg={cfg} openSettings={openS} />
-              <Excalidraw cfg={cfg} openSettings={openS} />
+              <ExcalidrawBlock />
             </div>
             <div style={{ marginBottom: 18 }}>
               <CreationStorage cfg={cfg} openSettings={openS} />
