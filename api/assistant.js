@@ -1,3 +1,13 @@
+// Fonction serverless Vercel — version GRATUITE via Google Gemini (Google AI Studio).
+// Remplace l'ancienne api/assistant.js (version Anthropic). Le client (App.jsx)
+// n'a pas besoin de changer : il appelle toujours /api/assistant avec { prompt }.
+//
+// Variables d'environnement à définir dans Vercel (Settings → Environment Variables) :
+//   GEMINI_API_KEY   (obligatoire)  clé gratuite depuis https://aistudio.google.com
+//   GEMINI_MODEL     (facultatif)   défaut : gemini-2.5-flash
+//
+// La clé Gemini gratuite ne demande pas de carte bancaire (1 500 requêtes/jour).
+
 function readBody(req) {
   return new Promise((resolve) => {
     let data = "";
