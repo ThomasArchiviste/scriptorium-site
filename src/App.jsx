@@ -6,7 +6,7 @@ import {
   Library, Save, Info, Link2, ArrowRight, BookMarked, ChevronDown, Filter,
   Moon, Sun, BookText, CornerDownRight, Workflow
 } from "lucide-react";
-import { Excalidraw as ExcalidrawCanvas } from "@excalidraw/excalidraw";
+import { Excalidraw as ExcalidrawCanvas, exportToBlob } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 
 /* ------------------------------------------------------------------ */
@@ -311,6 +311,13 @@ function usePersistent(key, initial) {
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 /* ------------------------------------------------------------------ */
 /*  Petits composants                                                  */
 /* ------------------------------------------------------------------ */
@@ -454,8 +461,14 @@ function Agenda({ cfg, openSettings }) {
   const src = useMemo(() => {
     const v = (cfg.calendar || "").trim();
     if (!v) return "";
-    if (v.startsWith("http")) return v.includes("hl=") ? v : v + (v.includes("?") ? "&" : "?") + "hl=fr";
-    return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(v)}&ctz=Europe/Paris&mode=AGENDA&hl=fr&bgcolor=%23FFFFFF`;
+    let u;
+    try {
+      u = v.startsWith("http") ? new URL(v) : new URL("https://calendar.google.com/calendar/embed");
+      if (!v.startsWith("http")) { u.searchParams.set("src", v); u.searchParams.set("mode", "AGENDA"); }
+    } catch (e) { return v; }
+    u.searchParams.set("hl", "fr");          // interface française → heures en 24 h
+    u.searchParams.set("ctz", "Europe/Paris");
+    return u.toString();
   }, [cfg.calendar]);
   return (
     <Panel icon={Calendar} title="Agenda" kicker="Google Agenda" cote="ACC·AG"
@@ -884,9 +897,9 @@ function useDriveFiles(apiKey, folderId) {
   return state;
 }
 
-function DriveBody({ cfg, folderId, mode, emptyText, openSettings, badge }) {
+function DriveBody({ cfg, folderId, emptyText, openSettings, badge }) {
   const apiKey = ((cfg && cfg.driveKey) || "").trim();
-  const { status, files, error } = useDriveFiles(apiKey, folderId);
+  const { status, files } = useDriveFiles(apiKey, folderId);
   const [query, setQuery] = useState("");
 
   if (!folderId) {
@@ -898,19 +911,12 @@ function DriveBody({ cfg, folderId, mode, emptyText, openSettings, badge }) {
     );
   }
 
-  if (!apiKey) {
-    return (
-      <div>
-        <div className="notice" style={{ marginBottom: 12 }}>
-          <Info size={17} className="ico" />
-          <div>Ajoute une <b>clé API Google Drive</b> (gratuite) dans les réglages pour afficher tes fichiers <b>ici même, avec aperçu et noms lisibles</b>. En attendant, ouvre le dossier dans Drive.</div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-brass btn-sm" onClick={openSettings}><Settings size={14} /> Ajouter la clé</button>
-          <a className="btn btn-ghost btn-sm" href={`https://drive.google.com/drive/folders/${folderId}`} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Ouvrir dans Drive</a>
-        </div>
-      </div>
-    );
+  // Galerie thémée seulement si la clé API renvoie réellement des fichiers ;
+  // sinon, aperçu Drive natif (grille de vignettes) — fiable, sans configuration.
+  const useGallery = apiKey && status === "ok" && files.length > 0;
+  if (!useGallery) {
+    const src = `https://drive.google.com/embeddedfolderview?id=${folderId}#grid`;
+    return <iframe title="drive" src={src} style={{ width: "100%", height: 400, border: 0, borderRadius: 3, background: "#fff" }} />;
   }
 
   const filtered = files.filter((f) => !query || f.name.toLowerCase().includes(query.toLowerCase()));
@@ -919,24 +925,19 @@ function DriveBody({ cfg, folderId, mode, emptyText, openSettings, badge }) {
       <div className="topsearch" style={{ display: "flex", marginBottom: 13 }}>
         <Search size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filtrer les fichiers…" />
       </div>
-      {status === "loading" && <div className="empty"><div className="dots"><span /><span /><span /></div></div>}
-      {status === "error" && <Notice>Connexion Drive impossible : {error}. Vérifie la clé API et le partage du dossier.</Notice>}
-      {status === "ok" && filtered.length === 0 && <div className="empty"><p>Aucun fichier{query ? " ne correspond" : " dans ce dossier"}.</p></div>}
-      {status === "ok" && filtered.length > 0 && (
-        <div className="dgal scroll" style={{ maxHeight: 470 }}>
-          {filtered.map((f) => (
-            <a className="dgal-card" key={f.id}
-              href={(f.mimeType || "").includes("folder") ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`}
-              target="_blank" rel="noreferrer">
-              <DriveThumb id={f.id} mimeType={f.mimeType} badge={badge} />
-              <div className="dgal-meta">
-                <div className="dgal-name">{f.name}</div>
-                <div className="dgal-type">{typeLabel(f.mimeType)}</div>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
+      <div className="dgal scroll" style={{ maxHeight: 470 }}>
+        {filtered.map((f) => (
+          <a className="dgal-card" key={f.id}
+            href={(f.mimeType || "").includes("folder") ? `https://drive.google.com/drive/folders/${f.id}` : `https://drive.google.com/file/d/${f.id}/view`}
+            target="_blank" rel="noreferrer">
+            <DriveThumb id={f.id} mimeType={f.mimeType} badge={badge} />
+            <div className="dgal-meta">
+              <div className="dgal-name">{f.name}</div>
+              <div className="dgal-type">{typeLabel(f.mimeType)}</div>
+            </div>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
@@ -996,7 +997,7 @@ function WikiNotion({ register }) {
 
   const renderInline = (text, keyBase) => {
     const nodes = []; let rest = text; let k = 0;
-    const re = /(\[\[([^\]]+)\]\])|(\*\*([^*]+)\*\*)/;
+    const re = /(\[\[([^\]]+)\]\])|(\*\*([^*]+)\*\*)|(\*([^*\n]+)\*)|(_([^_\n]+)_)/;
     while (rest.length) {
       const m = rest.match(re);
       if (!m) { nodes.push(rest); break; }
@@ -1007,6 +1008,10 @@ function WikiNotion({ register }) {
         nodes.push(<span key={keyBase + "-" + (k++)} className={"wlink" + (exists ? "" : " missing")} onClick={() => gotoTitle(title)}>{title}</span>);
       } else if (m[3]) {
         nodes.push(<strong key={keyBase + "-" + (k++)}>{m[4]}</strong>);
+      } else if (m[5]) {
+        nodes.push(<em key={keyBase + "-" + (k++)}>{m[6]}</em>);
+      } else if (m[7]) {
+        nodes.push(<em key={keyBase + "-" + (k++)}>{m[8]}</em>);
       }
       rest = rest.slice(m.index + m[0].length);
     }
@@ -1110,8 +1115,8 @@ function WikiNotion({ register }) {
                 {editing ? (
                   <>
                     <textarea className="wiki-edit" value={sel.content || ""} onChange={(e) => update(sel.id, { content: e.target.value })}
-                      placeholder="Écris ici…  Lien : [[Titre]] · Titre : # · Sous-titre : ## · Gras : **texte** · Liste : - élément" />
-                    <div className="wiki-hint">Lien : <b>[[Titre]]</b> &nbsp;·&nbsp; Titre : <b># </b> &nbsp;·&nbsp; Sous-titre : <b>## </b> &nbsp;·&nbsp; Gras : <b>**texte**</b> &nbsp;·&nbsp; Liste : <b>- </b></div>
+                      placeholder="Écris ici…  Lien : [[Titre]] · Titre : # · Sous-titre : ## · Gras : **texte** · Italique : *texte* · Liste : - élément" />
+                    <div className="wiki-hint">Lien : <b>[[Titre]]</b> &nbsp;·&nbsp; Titre : <b># </b> &nbsp;·&nbsp; Sous-titre : <b>## </b> &nbsp;·&nbsp; Gras : <b>**texte**</b> &nbsp;·&nbsp; Italique : <b>*texte*</b> &nbsp;·&nbsp; Liste : <b>- </b></div>
                   </>
                 ) : (
                   <div className="wiki-render" onDoubleClick={() => setEditing(true)}>
@@ -1368,7 +1373,7 @@ function Whimsical({ cfg, openSettings }) {
           <iframe title="whimsical" className="frame" src={src} style={{ height: 440 }} allowFullScreen />
           <div className="notice" style={{ marginTop: 12 }}>
             <Info size={17} className="ico" />
-            <div>Tableau blanc ou erreur ? Dans Whimsical : <i>Share → Embed</i>, puis active <b>« Enable public access »</b> (sans accès public, il faut être connecté à Whimsical dans ce navigateur).</div>
+            <div>L'intégration Whimsical est en <b>lecture seule</b> (c'est normal) : pour <b>modifier</b>, ouvre le tableau dans Whimsical avec le bouton ↗. Si l'aperçu est blanc, active <i>Share → Embed → « Enable public access »</i>.</div>
           </div>
         </>
       ) : (
@@ -1383,78 +1388,91 @@ function Whimsical({ cfg, openSettings }) {
   );
 }
 
-function CreationStorage({ cfg, openSettings }) {
+function CreationStorage({ cfg, openSettings, drawings, setDrawings, onOpen }) {
   const id = (cfg.createFolder || "").trim();
+
+  const dlExcalidraw = (d) => {
+    const content = JSON.stringify({ type: "excalidraw", version: 2, source: "scriptorium", elements: d.elements || [], appState: {}, files: d.files || {} });
+    downloadBlob(new Blob([content], { type: "application/json" }), (d.name || "croquis") + ".excalidraw");
+  };
+  const dlPng = async (d) => {
+    try {
+      const blob = await exportToBlob({ elements: d.elements || [], files: d.files || {}, appState: { exportBackground: true }, mimeType: "image/png" });
+      downloadBlob(blob, (d.name || "croquis") + ".png");
+    } catch (e) { alert("Export PNG impossible pour ce croquis."); }
+  };
+
   return (
-    <Panel icon={FolderOpen} title="Sauvegardes" kicker="Exports Whimsical & archives · Google Drive" cote="CRE·SAV"
+    <Panel icon={FolderOpen} title="Sauvegardes" kicker="Croquis enregistrés & dossier Drive" cote="CRE·SAV"
       right={<button className="mini" onClick={openSettings}><Settings size={15} /></button>}>
-      <DriveBody cfg={cfg} folderId={id} mode="grid" openSettings={openSettings} badge="Création"
-        emptyText="Un dossier Drive pour conserver tes exports Whimsical et toute archive de création." />
-      {id && (
-        <div className="notice" style={{ marginTop: 12 }}>
-          <Info size={17} className="ico" />
-          <div>Tes croquis <b>Excalidraw sont déjà enregistrés dans le site</b> (bloc ci-dessus) — pas besoin de Drive pour eux. Ce dossier sert aux <b>exports Whimsical</b> (Share → Export, PNG/PDF) et aux archives. L'enregistrement automatique <i>depuis</i> le site <i>vers</i> Drive demanderait la connexion Google (OAuth) : pour l'instant, dépose les fichiers dans Drive manuellement.</div>
+      <div className="panel-kicker" style={{ marginBottom: 8 }}>Croquis Excalidraw enregistrés</div>
+      {(!drawings || drawings.length === 0) ? (
+        <div className="empty" style={{ padding: "16px 0" }}><p>Aucun croquis enregistré. Dessine dans Excalidraw puis clique « Créer ».</p></div>
+      ) : (
+        <div className="scroll" style={{ maxHeight: 230, marginBottom: 4 }}>
+          {drawings.map((d) => (
+            <div className="item" key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div className="item-t" style={{ fontSize: 16, cursor: "pointer" }} onClick={() => onOpen(d.id)}>{d.name}</div>
+              <div style={{ display: "flex", gap: 6, flex: "none" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => onOpen(d.id)}><Pencil size={13} /> Ouvrir</button>
+                <button className="mini" title="Télécharger .excalidraw" onClick={() => dlExcalidraw(d)}><FileText size={14} /></button>
+                <button className="mini" title="Exporter en PNG" onClick={() => dlPng(d)}><ImageIcon size={14} /></button>
+                <button className="mini del" title="Supprimer" onClick={() => setDrawings((l) => l.filter((x) => x.id !== d.id))}><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      <div className="panel-kicker" style={{ margin: "14px 0 8px" }}>Dossier Drive — exports Whimsical & archives</div>
+      <DriveBody cfg={cfg} folderId={id} openSettings={openSettings} badge="Création"
+        emptyText="Un dossier Drive pour conserver tes exports Whimsical et tes archives." />
+
+      <div className="notice" style={{ marginTop: 12 }}>
+        <Info size={17} className="ico" />
+        <div>Tes croquis Excalidraw sont <b>enregistrés dans le site</b> et rouvrables ici d'un clic. Pour les <b>déposer sur Drive</b> ou les passer à un autre outil, utilise « Télécharger » (.excalidraw) ou « PNG ». L'enregistrement <i>automatique</i> vers Google Drive demande la connexion Google (OAuth), non incluse pour l'instant.</div>
+      </div>
     </Panel>
   );
 }
 
-function ExcalidrawBlock() {
-  const [drawings, setDrawings] = usePersistent("scr.excalidraw", []); // [{id, name, elements, files}]
-  const [currentId, setCurrentId] = useState(null);
+function ExcalidrawBlock({ drawings, setDrawings, currentId, setCurrentId }) {
   const [name, setName] = useState("");
   const [loadKey, setLoadKey] = useState(0);
   const dataRef = useRef({ elements: [], files: {} });
   const initialRef = useRef({ elements: [], files: {} });
 
-  const newDrawing = () => {
-    initialRef.current = { elements: [], files: {} };
-    dataRef.current = { elements: [], files: {} };
-    setCurrentId(null); setName(""); setLoadKey((k) => k + 1);
-  };
-  const loadDrawing = (d) => {
-    initialRef.current = { elements: d.elements || [], files: d.files || {} };
-    dataRef.current = { elements: d.elements || [], files: d.files || {} };
-    setCurrentId(d.id); setName(d.name || ""); setLoadKey((k) => k + 1);
-  };
-  const saveDrawing = () => {
+  useEffect(() => {
+    const d = (drawings || []).find((x) => x.id === currentId);
+    initialRef.current = d ? { elements: d.elements || [], files: d.files || {} } : { elements: [], files: {} };
+    dataRef.current = { elements: initialRef.current.elements, files: initialRef.current.files };
+    setName(d ? (d.name || "") : "");
+    setLoadKey((k) => k + 1);
+  }, [currentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const newDrawing = () => setCurrentId(null);
+  const save = () => {
     const nm = name.trim() || ("Croquis " + new Date().toLocaleDateString("fr"));
     const payload = { elements: dataRef.current.elements || [], files: dataRef.current.files || {} };
-    if (currentId) {
-      setDrawings((l) => l.map((d) => d.id === currentId ? { ...d, name: nm, ...payload } : d));
-    } else {
-      const id = uid();
-      setDrawings((l) => [...l, { id, name: nm, ...payload }]);
-      setCurrentId(id);
-    }
+    if (currentId) setDrawings((l) => l.map((d) => d.id === currentId ? { ...d, name: nm, ...payload } : d));
+    else { const id = uid(); setDrawings((l) => [...(l || []), { id, name: nm, ...payload }]); setCurrentId(id); }
     setName(nm);
   };
-  const delDrawing = (id) => { setDrawings((l) => l.filter((d) => d.id !== id)); if (id === currentId) newDrawing(); };
 
   return (
-    <Panel icon={PenTool} title="Excalidraw" kicker="Croquis & schémas — enregistrés dans le site" cote="CRE·EXC"
+    <Panel icon={PenTool} title="Excalidraw" kicker="Croquis & schémas à main levée" cote="CRE·EXC"
       right={<button className="mini" title="Nouveau croquis" onClick={newDrawing}><Plus size={16} /></button>}>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <input className="inp" style={{ flex: 1, minWidth: 150 }} value={name} onChange={(e) => setName(e.target.value)}
-          placeholder={currentId ? "Renommer ce croquis" : "Nom du nouveau croquis"} />
-        <button className="btn btn-brass btn-sm" onClick={saveDrawing}><Save size={14} /> {currentId ? "Enregistrer" : "Créer"}</button>
+          placeholder={currentId ? "Renommer ce croquis" : "Nom du croquis"} />
+        <button className="btn btn-brass btn-sm" onClick={save}><Save size={14} /> {currentId ? "Enregistrer" : "Créer"}</button>
+        {currentId && <button className="btn btn-ghost btn-sm" onClick={newDrawing}><Plus size={14} /> Nouveau</button>}
       </div>
-      {drawings.length > 0 && (
-        <div className="tags" style={{ marginBottom: 10 }}>
-          {drawings.map((d) => (
-            <span key={d.id} className={"tag " + (d.id === currentId ? "on" : "")} style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-              <span onClick={() => loadDrawing(d)} style={{ cursor: "pointer" }}>{d.name}</span>
-              <X size={11} style={{ cursor: "pointer", opacity: .7 }} onClick={() => delDrawing(d.id)} />
-            </span>
-          ))}
-        </div>
-      )}
       <div className="excali-wrap">
         <ExcalidrawCanvas key={loadKey} theme="dark" initialData={initialRef.current}
           onChange={(elements, appState, files) => { dataRef.current = { elements, files }; }} />
       </div>
-      <div className="wiki-hint" style={{ marginTop: 8 }}>Dessine, nomme ton croquis puis <b>Enregistrer</b> — tout reste dans le site, rien à télécharger. Clique une vignette pour rouvrir un croquis.</div>
+      <div className="wiki-hint" style={{ marginTop: 8 }}>Dessine, nomme puis <b>Créer</b> / <b>Enregistrer</b>. Tes croquis se retrouvent dans le bloc <b>Sauvegardes</b> ci-dessous, où tu peux les rouvrir ou les exporter.</div>
     </Panel>
   );
 }
@@ -1521,9 +1539,12 @@ export default function App() {
   const [tab, setTab] = useState("accueil");
   const [cfg, setCfg] = usePersistent("scr.config", {});
   const [showSettings, setShowSettings] = useState(false);
-  const [topQuery, setTopQuery] = useState("");
   const [navOpen, setNavOpen] = useState(null);
   const navRef = useRef(null);
+
+  // État Excalidraw partagé entre l'éditeur et le bloc Sauvegardes
+  const [excali, setExcali] = usePersistent("scr.excalidraw", []);
+  const [excaliCurrent, setExcaliCurrent] = useState(null);
 
   useEffect(() => {
     if (!navOpen) return;
@@ -1546,16 +1567,6 @@ export default function App() {
   const regWiki = useCallback((v) => { idx.current.wiki = v; }, []);
 
   const openS = () => setShowSettings(true);
-
-  const goSearch = () => {
-    if (!topQuery.trim()) return;
-    setTab("accueil");
-    setTimeout(() => {
-      const inp = document.querySelector(".chat-bar input");
-      if (inp) { inp.value = topQuery; inp.focus(); }
-    }, 120);
-    setTopQuery("");
-  };
 
   return (
     <div className="scriptorium">
@@ -1599,11 +1610,6 @@ export default function App() {
             })}
           </nav>
           <div className="topspacer" />
-          <div className="topsearch">
-            <Search size={15} />
-            <input value={topQuery} placeholder="Rechercher dans les fonds…"
-              onChange={(e) => setTopQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") goSearch(); }} />
-          </div>
           <button className="iconbtn" onClick={openS} title="Réglages"><Settings size={17} /></button>
         </div>
       </header>
@@ -1690,10 +1696,10 @@ export default function App() {
             </div>
             <div className="grid g-2" style={{ marginBottom: 18 }}>
               <Whimsical cfg={cfg} openSettings={openS} />
-              <ExcalidrawBlock />
+              <ExcalidrawBlock drawings={excali} setDrawings={setExcali} currentId={excaliCurrent} setCurrentId={setExcaliCurrent} />
             </div>
             <div style={{ marginBottom: 18 }}>
-              <CreationStorage cfg={cfg} openSettings={openS} />
+              <CreationStorage cfg={cfg} openSettings={openS} drawings={excali} setDrawings={setExcali} onOpen={(id) => setExcaliCurrent(id)} />
             </div>
             <DriveEmbed icon={MapIcon} title="Cartothèque" kicker="Cartes & relevés · Google Drive" cote="CRE·CAR"
               folderId={cfg.cartoFolder} mode="grid" cfg={cfg} badge="Carte" openSettings={openS}
