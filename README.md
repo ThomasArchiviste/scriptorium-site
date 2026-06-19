@@ -64,12 +64,12 @@ Tout se configure depuis l'icône **Réglages** (en haut à droite). Les donnée
 (citations, prosopographie, frise, écriture, projet, **wiki**) sont enregistrées
 dans le navigateur (localStorage).
 
-- **Clé API Google Drive** (facultative mais recommandée) : permet d'afficher les
-  dossiers Drive avec des **vignettes intégrées au thème** et des noms lisibles
-  (Documents, Banque d'image, Livres/PDF, Cartothèque, Sauvegardes). Sans elle, le
-  dossier s'affiche via l'aperçu standard de Drive.
 - **Dossiers Google Drive** : partage-les « toute personne disposant du lien » et
-  colle l'identifiant (partie après `/folders/` dans l'URL).
+  colle l'identifiant (partie après `/folders/`). Les fichiers s'affichent alors en
+  **aperçu (grille de vignettes)** directement dans le site, sans autre réglage.
+- **Clé API Google Drive** (facultative) : si elle est renseignée et que le dossier
+  est listable, l'affichage passe à une **galerie thémée** (vignettes + noms aux
+  couleurs du site). Sinon, l'aperçu Drive natif reste utilisé.
 - **Agenda** : adresse Google Agenda ou lien d'intégration ; bouton clair/sombre
   intégré au bloc.
 - **Tropy** : import d'un export JSON-LD (page dédiée via le menu Bibliothèque) →
