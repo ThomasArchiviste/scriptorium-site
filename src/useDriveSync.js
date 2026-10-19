@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   localStore, readMeta, writeMeta, syncCore, makeDrive, acquireToken, getCachedToken,
-  clearCachedToken, revokeToken, AuthError, LS_EVENT, describeError,
+  clearCachedToken, revokeToken, prepareGoogle, AuthError, LS_EVENT, describeError,
 } from "./sync.js";
 
 /**
@@ -82,6 +82,12 @@ export function useDriveSync(clientId) {
       busy.current = false;
     }
   }, [patch]);
+
+  // Précharge Google Identity Services dès que l'ID client est connu : la fenêtre de connexion doit
+  // pouvoir s'ouvrir immédiatement au clic (sinon le navigateur la considère comme un pop-up non sollicité).
+  useEffect(() => {
+    if (clientId) prepareGoogle(clientId).catch(() => {});
+  }, [clientId]);
 
   // Envoi automatique, quelques secondes après une modification locale.
   useEffect(() => {
