@@ -226,20 +226,45 @@ let cached = { token: null, exp: 0 };
 export function getCachedToken() { return cached.token && Date.now() < cached.exp - 60000 ? cached.token : null; }
 export function clearCachedToken() { cached = { token: null, exp: 0 }; }
 
-export async function acquireToken(clientId, prompt = "") {
+// Le client de jeton est créé À L'AVANCE (au chargement de la page) : l'ouverture de la fenêtre Google doit
+// être déclenchée directement par le clic de l'utilisateur, sans aucune attente (chargement de script,
+// requête réseau…) entre le clic et requestAccessToken(), sinon le navigateur refuse d'ouvrir la fenêtre.
+let tokenClient = null;
+let tokenClientId = null;
+let pending = null;
+
+export async function prepareGoogle(clientId) {
   await loadGis();
+  if (tokenClient && tokenClientId === clientId) return;
+  tokenClientId = clientId;
+  tokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: SCOPE,
+    callback: (resp) => {
+      const p = pending; pending = null;
+      if (!p) return;
+      if (resp.error) { p.reject(new Error(resp.error_description || resp.error)); return; }
+      cached = { token: resp.access_token, exp: Date.now() + (Number(resp.expires_in) || 3600) * 1000 };
+      p.resolve(resp.access_token);
+    },
+    error_callback: (err) => {
+      const p = pending; pending = null;
+      if (p) p.reject(new Error((err && err.type) || "popup_error"));
+    },
+  });
+}
+
+// NE PAS rendre cette fonction « async » ni y ajouter d'await avant requestAccessToken().
+export function acquireToken(clientId, prompt = "") {
   return new Promise((resolve, reject) => {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPE,
-      callback: (resp) => {
-        if (resp.error) { reject(new Error(resp.error_description || resp.error)); return; }
-        cached = { token: resp.access_token, exp: Date.now() + (Number(resp.expires_in) || 3600) * 1000 };
-        resolve(resp.access_token);
-      },
-      error_callback: (err) => reject(new Error((err && err.type) || "popup_error")),
-    });
-    client.requestAccessToken({ prompt });
+    if (!tokenClient || tokenClientId !== clientId) {
+      prepareGoogle(clientId).catch(() => {});
+      reject(new Error("gis_not_ready"));
+      return;
+    }
+    pending = { resolve, reject };
+    try { tokenClient.requestAccessToken({ prompt }); }
+    catch (e) { pending = null; reject(e); }
   });
 }
 
@@ -301,7 +326,8 @@ export function describeError(e) {
   const m = (e && e.message) || String(e);
   if (e instanceof AuthError) return "Session Google expirée — reconnecte-toi.";
   if (/popup_closed/.test(m)) return "Fenêtre Google fermée avant la fin de la connexion.";
-  if (/popup_failed_to_open/.test(m)) return "Le navigateur a bloqué la fenêtre Google : autorise les pop-ups pour ce site.";
+  if (/gis_not_ready/.test(m)) return "Le module Google finit de se charger : réessaie dans quelques secondes.";
+  if (/popup_failed_to_open/.test(m)) return "La fenêtre Google n'a pas pu s'ouvrir. Réessaie en cliquant directement ; si ça persiste, désactive pour ce site les bloqueurs de pub / protections renforcées (extensions, Brave Shields, Firefox) puis recharge la page.";
   if (/access_denied/.test(m)) return "Accès refusé. Vérifie que ton adresse figure parmi les utilisateurs test de l'écran de consentement Google.";
   if (/quota/i.test(m)) return "Espace de stockage du navigateur insuffisant : exporte une sauvegarde, puis libère de la place.";
   if (/Failed to fetch|NetworkError/i.test(m)) return "Connexion impossible (réseau ou bloqueur de contenu).";
