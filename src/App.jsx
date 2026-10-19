@@ -4,8 +4,14 @@ import {
   Quote, Settings, Plus, Trash2, X, ExternalLink, Send, Sparkles, Pencil,
   ChevronRight, Upload, Layers, PenTool, Home, FolderOpen, User, Map as MapIcon,
   Library, Save, Info, Link2, ArrowRight, BookMarked, ChevronDown, Filter,
-  Moon, Sun, BookText, CornerDownRight, Workflow
+  Moon, Sun, BookText, CornerDownRight, Workflow,
+  Cloud, CloudOff, RefreshCw, Download, AlertTriangle
 } from "lucide-react";
+import { useDriveSync } from "./useDriveSync.js";
+import {
+  localStore, recordWrite, LS_EVENT, labelOf, readLost,
+  exportLocalBackup, importLocalBackup, downloadLostVersions,
+} from "./sync.js";
 import { Excalidraw as ExcalidrawCanvas, exportToBlob } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { Tldraw } from "tldraw";
@@ -67,6 +73,20 @@ const CSS = `
 .topsearch input::placeholder{color:var(--muted)}
 .iconbtn{background:var(--ink2); border:1px solid var(--line); color:var(--vellum-dim); width:38px; height:38px; border-radius:2px; display:grid; place-items:center; cursor:pointer; flex:none; transition:all .18s}
 .iconbtn:hover{color:var(--brass); border-color:var(--brass)}
+
+/* Pastille de synchronisation Google Drive */
+.syncchip{display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 12px; background:var(--ink2); border:1px solid var(--line); color:var(--vellum-dim); border-radius:2px; font-family:var(--sans); font-size:12.5px; cursor:pointer; flex:none; transition:all .18s; white-space:nowrap}
+.syncchip:hover{color:var(--brass); border-color:var(--brass)}
+.syncchip.ok{color:#8fb996; border-color:rgba(143,185,150,.35)}
+.syncchip.warn{color:var(--brass-hi); border-color:var(--brass)}
+.syncchip.err{color:#e0897b; border-color:var(--sanguine)}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:760px){.syncchip .lbl{display:none}}
+.syncstatus{display:flex; align-items:flex-start; gap:9px; background:var(--ink2); border:1px solid var(--line-soft); border-left:2px solid var(--brass); border-radius:2px; padding:11px 13px; font-size:13px; color:var(--vellum-dim); line-height:1.5; margin:4px 0 12px}
+.syncstatus.err{border-left-color:var(--sanguine)}
+.syncstatus.ok{border-left-color:#8fb996}
+.btnrow{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px}
 
 /* Vue */
 .view{padding:30px 0 70px; animation:rise .4s ease both}
@@ -307,7 +327,10 @@ function usePersistent(key, initial) {
     } catch (e) { return initial; }
   });
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* quota / mode privé */ }
+    try {
+      // recordWrite tient à jour la date de modification (pour la synchro Drive)
+      if (recordWrite(localStore, key, JSON.stringify(val))) window.dispatchEvent(new Event(LS_EVENT));
+    } catch (e) { /* quota / mode privé */ }
   }, [key, val]);
   return [val, setVal];
 }
@@ -1532,10 +1555,110 @@ function CreationStorage({ creations, setCreations, onOpen }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Synchronisation Google Drive — interface                          */
+/* ------------------------------------------------------------------ */
+
+function SyncChip({ sync, hasId, onSettings }) {
+  const time = sync.lastSync ? new Date(sync.lastSync).toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }) : "";
+  let Ico = CloudOff, label = "Synchroniser", cls = "", title = "Synchroniser avec Google Drive", onClick = sync.connect;
+  if (!hasId) { label = "Sync Drive"; title = "Synchronisation Google Drive : à configurer dans les Réglages"; onClick = onSettings; }
+  else if (sync.status === "syncing") { Ico = RefreshCw; label = "Synchro…"; title = "Synchronisation en cours"; onClick = undefined; }
+  else if (sync.status === "ok") { Ico = Cloud; label = "Synchronisé " + time; cls = "ok"; title = sync.msg || title; onClick = sync.syncNow; }
+  else if (sync.status === "ready") { Ico = Cloud; label = "À synchroniser"; cls = "warn"; title = "Reprendre la session Google et synchroniser"; onClick = sync.syncNow; }
+  else if (sync.status === "pending") { Ico = Download; label = "Mises à jour Drive"; cls = "warn"; title = sync.msg; onClick = sync.syncNow; }
+  else if (sync.status === "auth") { Ico = AlertTriangle; label = "Reconnecter"; cls = "warn"; title = sync.msg; onClick = sync.syncNow; }
+  else if (sync.status === "choice") { Ico = AlertTriangle; label = "Choix requis"; cls = "warn"; title = sync.msg; onClick = sync.syncNow; }
+  else if (sync.status === "error") { Ico = AlertTriangle; label = "Erreur de synchro"; cls = "err"; title = sync.msg; onClick = sync.syncNow; }
+  return (
+    <button className={"syncchip " + cls} onClick={onClick} title={title} disabled={sync.status === "syncing"}>
+      <Ico size={15} className={sync.status === "syncing" ? "spin" : ""} />
+      <span className="lbl">{label}</span>
+    </button>
+  );
+}
+
+function SyncChoiceModal({ choice, onChoose, onCancel }) {
+  return (
+    <div className="overlay" style={{ zIndex: 95 }} onClick={(e) => { if (e.target.classList.contains("overlay")) onCancel(); }}>
+      <div className="modal">
+        <button className="iconbtn modal-x" onClick={onCancel}><X size={16} /></button>
+        <h3>Première synchronisation</h3>
+        <p className="sub">Cet appareil et ton Drive contiennent déjà des versions différentes de :</p>
+        <ul style={{ margin: "0 0 14px", paddingLeft: 20, color: "var(--vellum)", fontSize: 14, lineHeight: 1.75 }}>
+          {choice.conflicts.map((k) => <li key={k}>{labelOf(k)}</li>)}
+        </ul>
+        <Notice>Les rubriques présentes d'un seul côté sont fusionnées dans tous les cas. La version remplacée, quel que soit ton choix, est mise de côté et récupérable dans les <b>Réglages</b>.</Notice>
+        <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+          <button className="btn btn-brass" style={{ justifyContent: "center" }} onClick={() => onChoose("drive")}>Garder la version de Drive (remplace celle de cet appareil)</button>
+          <button className="btn btn-ghost" style={{ justifyContent: "center" }} onClick={() => onChoose("local")}>Garder la version de cet appareil (remplace celle de Drive)</button>
+          <button className="btn btn-ghost btn-sm" style={{ justifyContent: "center" }} onClick={() => exportLocalBackup()}><Download size={14} /> Télécharger d'abord une sauvegarde de cet appareil</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SyncSettings({ d, f, cfg, envId, sync }) {
+  const fileRef = useRef(null);
+  const typed = (d.googleClientId || "").trim();
+  const savedId = ((cfg.googleClientId || "").trim()) || envId;
+  const dirty = typed !== (cfg.googleClientId || "").trim();
+  const lostCount = readLost(localStore).length;
+  const time = sync.lastSync ? new Date(sync.lastSync).toLocaleString("fr", { dateStyle: "short", timeStyle: "short" }) : "";
+
+  let line = "Non connecté : tes données restent uniquement dans ce navigateur.";
+  let cls = "";
+  if (sync.status === "ready") line = "Connecté. Clique « Synchroniser » pour reprendre la session Google (valable environ 1 h).";
+  if (sync.status === "ok") { line = "Synchronisé" + (time ? " le " + time : "") + (sync.msg ? " — " + sync.msg : "") + "."; cls = "ok"; }
+  if (["pending", "auth", "choice"].includes(sync.status)) line = sync.msg;
+  if (sync.status === "error") { line = sync.msg; cls = "err"; }
+  if (sync.status === "syncing") line = "Synchronisation en cours…";
+
+  const doImport = async (file) => {
+    try {
+      const n = await importLocalBackup(file);
+      alert(n + " rubrique(s) importée(s). La page va se recharger.");
+      window.location.reload();
+    } catch (e) { alert("Fichier illisible : choisis une sauvegarde Scriptorium (.json)."); }
+  };
+
+  return (
+    <div className="set-group">
+      <h5><Cloud size={13} /> Synchronisation Google Drive</h5>
+      <p className="sub" style={{ margin: "0 0 12px" }}>Garde les mêmes données sur tous tes appareils. Elles sont enregistrées dans un espace privé de ton Drive, invisible dans « Mon Drive » et accessible uniquement par ce site.</p>
+      <div className="field"><label>ID client OAuth Google</label>
+        <input className="inp" value={d.googleClientId || ""} onChange={f("googleClientId")}
+          placeholder={envId ? "Déjà fourni par le déploiement (laisser vide)" : "xxxxxxxx.apps.googleusercontent.com"} /></div>
+      {dirty && <div className="wiki-hint" style={{ marginTop: -6, marginBottom: 10 }}>Clique d'abord sur « Enregistrer les connexions » (en bas) pour appliquer cet ID.</div>}
+
+      <div className={"syncstatus " + cls}><Info size={16} style={{ flex: "none", marginTop: 2, color: "var(--brass)" }} /><div>{line}</div></div>
+
+      <div className="btnrow">
+        {!sync.connected
+          ? <button className="btn btn-brass btn-sm" disabled={!savedId || dirty || sync.status === "syncing"} onClick={sync.connect}><Cloud size={14} /> Se connecter à Google Drive</button>
+          : <>
+              <button className="btn btn-brass btn-sm" disabled={sync.status === "syncing"} onClick={sync.syncNow}><RefreshCw size={14} /> Synchroniser maintenant</button>
+              <button className="btn btn-ghost btn-sm" onClick={sync.disconnect}><CloudOff size={14} /> Se déconnecter</button>
+            </>}
+      </div>
+
+      <div className="panel-kicker" style={{ margin: "14px 0 8px" }}>Sauvegarde manuelle</div>
+      <div className="btnrow">
+        <button className="btn btn-ghost btn-sm" onClick={() => exportLocalBackup()}><Download size={14} /> Exporter mes données</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => fileRef.current && fileRef.current.click()}><Upload size={14} /> Importer une sauvegarde</button>
+        {lostCount > 0 && <button className="btn btn-ghost btn-sm" onClick={() => downloadLostVersions()}><Download size={14} /> Versions mises de côté ({lostCount})</button>}
+      </div>
+      <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }}
+        onChange={(e) => { if (e.target.files[0]) doImport(e.target.files[0]); e.target.value = ""; }} />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Réglages                                                          */
 /* ------------------------------------------------------------------ */
 
-function SettingsModal({ cfg, setCfg, onClose }) {
+function SettingsModal({ cfg, setCfg, onClose, sync, envId }) {
   const [d, setD] = useState(cfg);
   const f = (k) => (e) => setD({ ...d, [k]: e.target.value });
   return (
@@ -1543,7 +1666,9 @@ function SettingsModal({ cfg, setCfg, onClose }) {
       <div className="modal" style={{ maxWidth: 600 }}>
         <button className="iconbtn modal-x" onClick={onClose}><X size={16} /></button>
         <h3>Réglages & connexions</h3>
-        <p className="sub">Relie tes outils. Tout reste enregistré localement dans ce tableau de bord.</p>
+        <p className="sub">Relie tes outils. Tes données sont enregistrées dans ce navigateur, et synchronisables avec ton Drive.</p>
+
+        <SyncSettings d={d} f={f} cfg={cfg} envId={envId} sync={sync} />
 
         <div className="set-group">
           <h5><Calendar size={13} /> Agenda</h5>
@@ -1591,6 +1716,10 @@ export default function App() {
   const [tab, setTab] = useState("accueil");
   const [cfg, setCfg] = usePersistent("scr.config", {});
   const [showSettings, setShowSettings] = useState(false);
+  // ID client OAuth Google : saisi dans les Réglages, sinon fourni au déploiement (VITE_GOOGLE_CLIENT_ID)
+  const envClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+  const clientId = ((cfg.googleClientId || "").trim()) || envClientId;
+  const sync = useDriveSync(clientId);
   const [navOpen, setNavOpen] = useState(null);
   const navRef = useRef(null);
 
@@ -1665,6 +1794,7 @@ export default function App() {
             })}
           </nav>
           <div className="topspacer" />
+          <SyncChip sync={sync} hasId={!!clientId} onSettings={openS} />
           <button className="iconbtn" onClick={openS} title="Réglages"><Settings size={17} /></button>
         </div>
       </header>
@@ -1770,7 +1900,8 @@ export default function App() {
         </div>
       </main>
 
-      {showSettings && <SettingsModal cfg={cfg} setCfg={setCfg} onClose={() => setShowSettings(false)} />}
+      {sync.choice && <SyncChoiceModal choice={sync.choice} onChoose={sync.resolveChoice} onCancel={sync.cancelChoice} />}
+      {showSettings && <SettingsModal cfg={cfg} setCfg={setCfg} sync={sync} envId={envClientId} onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
